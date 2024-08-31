@@ -5,15 +5,20 @@ mod lang_items;
 mod sbi;
 #[macro_use]
 mod console;
+mod logger;
 
 use core::arch::global_asm;
+
+use log::info;
 
 global_asm!(include_str!("entry.asm"));
 
 #[no_mangle]
 pub fn kernel_main() -> ! {
     clear_bss();
-    println!("Hello, world!");
+    logger::init();
+    
+    info!("Hello World!");
     panic!("Shutdown machine!");
 }
 

@@ -10,7 +10,7 @@ else
     exit
 fi
 
-tmux send-keys -tkernel:qemu "qemu \
+tmux send-keys -tkernel:qemu "qemu-system-riscv64 \
 -machine virt \
 -nographic \
 -bios ../bootloader/rustsbi-qemu.bin \

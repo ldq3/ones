@@ -1,42 +1,52 @@
+.altmacro
 .macro SAVE_GP n
     sd x\n, \n*8(sp)
 .endm
+.macro LOAD_GP n
+    ld x\n, \n*8(sp)
+.endm
+    .section .text
+    .globl __call_sys
+    .globl __ret_user
+    .align 2
 
-.align 2
-__store_trap_context:
+# call_sys()
+# trap into S mode from U mode 
+__call_sys:
+    # sp -> user stack, sscratch -> kernel stack, the next instruction will switch them
     csrrw sp, sscratch, sp
-    # now sp->kernel stack, sscratch->user stack
     # allocate a TrapContext on kernel stack
     addi sp, sp, -34*8
-    # save general-purpose registers
+    # save general-purpose registers on kernel stack
     sd x1, 1*8(sp)
-    # skip sp(x2), we will save it later
+    ## skip x2(sp)
     sd x3, 3*8(sp)
-    # skip tp(x4), application does not use it
-    # save x5~x31
+    ## skip x4(tp)
+    ## x5~x31
     .set n, 5
     .rept 27
         SAVE_GP %n
         .set n, n+1
     .endr
-    # we can use t0/t1/t2 freely, because they were saved on kernel stack
+
+    ## sstatus and sepc
     csrr t0, sstatus
     csrr t1, sepc
     sd t0, 32*8(sp)
     sd t1, 33*8(sp)
-    # read user stack from sscratch and save it on the kernel stack
+    ## user stack pointer
     csrr t2, sscratch
     sd t2, 2*8(sp)
-    # set input argument of trap_handler(cx: &mut TrapContext)
-    mv a0, sp
-    call trap_handler
 
-__restore_trap_context:
-    # case1: start running app by __restore
-    # case2: back to U after handling trap
+    # call distribute(cx: &mut Context)
+    mv a0, sp
+    call distribute
+
+# ret_user(cx: &mut Context)
+# back to U mode after handling trap
+__ret_user:
     mv sp, a0
-    # now sp->kernel stack(after allocated), sscratch->user stack
-    # restore sstatus/sepc
+    # restore sstatus, sepc and user stack pointer
     ld t0, 32*8(sp)
     ld t1, 33*8(sp)
     ld t2, 2*8(sp)

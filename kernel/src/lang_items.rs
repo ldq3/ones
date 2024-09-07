@@ -1,5 +1,5 @@
 use core::panic::PanicInfo;
-use crate::{println, sbi::shutdown};
+use crate::{println, arch::riscv::driver::cpu::shutdown};
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {

@@ -1,16 +1,13 @@
 use core::arch::global_asm;
-use crate::{trap::{
-    self,
+use crate::exception::{
     Context as TrapContext,
     Handler as TrapHandler,
-}, KERNEL_STACK, USER_STACK};
+};
 use log::info;
 use riscv::register::{
-    scause::{ self, Exception, Trap },
-    sstatus::{ self, Sstatus, SPP },
-    // stval,
-    stvec::{ self, TrapMode }
+    scause, sepc, sstatus::{ self, Sstatus, SPP }, stvec::{ self, TrapMode }
 };
+use crate::println;
 
 pub struct Context {
     x: [usize; 32],
@@ -59,13 +56,13 @@ impl TrapHandler<Context> for Handler {
 
         let mut cx = Context {
             x: [0; 32],
-            sstatus: sstatus,
+            sstatus,
             sepc: 0, // FIXME: the sepc should be the first instruction of user app
         };
 
-        cx.set_sp(USER_STACK.get_sp());
+        cx.set_sp(0);
 
-        Self::ret_user();
+        Self::ret_user(0);
     }   
 
     fn call_sys() {
@@ -76,25 +73,28 @@ impl TrapHandler<Context> for Handler {
     } 
 
     #[no_mangle]
-    fn distribute(cx: &mut Context) {
-        let scause = scause::read();
-        // let stval = stval::read();
+    fn distribute(_cx: &mut Context) -> ! {
+        let scause = scause::read().cause();
+        // let stval = stval::read(),
+        let sepc = sepc::read();
+        println!("trap: cause: {:?}, epc: 0x{:#x}", scause, sepc);
+        panic!("trap handled!");
 
-        match scause.cause() {
-            Trap::Exception(Exception::UserEnvCall) => {
-                cx.inc_epc(4);
-                cx.set_ret(
-                    trap::syscall::syscall(cx.syscall_id(), cx.fn_args()) as usize
-                );
-            },
-            _ => {}
-        }
+        // match scause.cause() {
+            // Trap::Exception(Exception::UserEnvCall) => {
+                // cx.inc_epc(4);
+                // cx.set_ret(
+                    // trap::syscall::syscall(cx.syscall_id(), cx.fn_args()) as usize
+                // );
+            // },
+            // _ => {}
+        // }
     }
     
-    fn ret_user() {
+    fn ret_user(_cx_addr: usize) {
         extern "C" { fn __ret_user(cx_addr: usize); }
         unsafe {
-            __ret_user(KERNEL_STACK.get_sp());
+            __ret_user(0);
         }        
     }
 }

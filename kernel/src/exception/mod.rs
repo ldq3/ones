@@ -1,4 +1,6 @@
 pub mod syscall;
+pub mod sync_exception;
+pub mod async_exception;
 
 // use log::error;
 
@@ -21,7 +23,7 @@ pub trait Handler<T: Context> {
 
     fn call_sys(); 
 
-    fn distribute(cx: &mut T);
+    fn distribute(cx: &mut T) -> !;
     
-    fn ret_user();
+    fn ret_user(cx_addr: usize);
 }

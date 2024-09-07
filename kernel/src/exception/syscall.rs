@@ -1,3 +1,5 @@
+use crate::{ print, println };
+
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
     match syscall_id {
         WRITE => write(args[0], args[1] as *const u8, args[2]),

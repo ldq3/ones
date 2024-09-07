@@ -1,3 +1,5 @@
+use crate::println;
+
 struct LevelColor {
     error: u8,
     warn: u8,

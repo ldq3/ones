@@ -5,9 +5,19 @@ use crate::exception::{
 };
 use log::info;
 use riscv::register::{
-    scause, sepc, sstatus::{ self, Sstatus, SPP }, stvec::{ self, TrapMode }
+    scause::{self, Interrupt, Trap},
+    sepc,
+    sstatus::{ self, Sstatus, SPP },
+    stvec::{ self, TrapMode },
+    sie,
 };
 use crate::println;
+
+pub fn enable_timer_interrupt() {
+    unsafe {
+        sie::set_stimer();
+    }
+}
 
 pub struct Context {
     x: [usize; 32],
@@ -73,22 +83,24 @@ impl TrapHandler<Context> for Handler {
     } 
 
     #[no_mangle]
-    fn distribute(_cx: &mut Context) -> ! {
-        let scause = scause::read().cause();
+    fn distribute(_cx: &mut Context) {
+        let scause = scause::read();
         // let stval = stval::read(),
         let sepc = sepc::read();
-        println!("trap: cause: {:?}, epc: 0x{:#x}", scause, sepc);
-        panic!("trap handled!");
+        println!("trap: cause: {:?}, epc: 0x{:#x}", scause.cause(), sepc);
 
-        // match scause.cause() {
+        match scause.cause() {
+            Trap::Interrupt(Interrupt::SupervisorTimer) => {
+                println!("time");
+            }
             // Trap::Exception(Exception::UserEnvCall) => {
                 // cx.inc_epc(4);
                 // cx.set_ret(
                     // trap::syscall::syscall(cx.syscall_id(), cx.fn_args()) as usize
                 // );
             // },
-            // _ => {}
-        // }
+            _ => {}
+        }
     }
     
     fn ret_user(_cx_addr: usize) {

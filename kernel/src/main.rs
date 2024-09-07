@@ -13,7 +13,6 @@ use log::info;
 use arch::riscv as arch_ins;
 
 use arch_ins::exception::Handler as TrapHandler;
-use riscv::asm::ebreak;
 use crate::exception::Handler;
 
 global_asm!(include_str!("arch/riscv/entry.asm"));
@@ -25,9 +24,10 @@ pub fn kernel_main() -> ! {
     logger::init();
     
     TrapHandler::init();
-    unsafe{
-        ebreak();
-    }
+    arch_ins::exception::enable_timer_interrupt();
+    arch_ins::driver::timer::set_next_trigger();
+
+    loop {}
 
     info!("Hello World!");
     panic!("Shutdown machine!");

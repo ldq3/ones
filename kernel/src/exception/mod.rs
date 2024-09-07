@@ -23,7 +23,7 @@ pub trait Handler<T: Context> {
 
     fn call_sys(); 
 
-    fn distribute(cx: &mut T) -> !;
+    fn distribute(cx: &mut T);
     
     fn ret_user(cx_addr: usize);
 }

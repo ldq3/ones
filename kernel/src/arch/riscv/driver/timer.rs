@@ -1,7 +1,7 @@
 pub static mut TICKS: usize = 0;
 
 const TIMEBASW: usize = 100_000;
-const FREQ: usize = 12500000;
+const FREQ: usize = 12_500_000;
 const TICKS_PER_SEC: usize = 100;
 
 use riscv::register::time;

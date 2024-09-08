@@ -5,7 +5,7 @@ use crate::exception::{
 };
 use log::info;
 use riscv::register::{
-    scause::{self, Interrupt, Trap},
+    scause::{self, Interrupt, Exception, Trap},
     sepc,
     sstatus::{ self, Sstatus, SPP },
     stvec::{ self, TrapMode },
@@ -54,7 +54,8 @@ pub struct Handler;
 impl TrapHandler<Context> for Handler {
     fn init() {
         unsafe {
-            stvec::write(Self::call_sys as usize, TrapMode::Direct);
+            stvec::write(Self::hanle_exp as usize, TrapMode::Direct);
+            sstatus::set_sie();
         }
 
         info!("init trap handler")
@@ -72,26 +73,30 @@ impl TrapHandler<Context> for Handler {
 
         cx.set_sp(0);
 
-        Self::ret_user(0);
+        Self::expt_ret(0);
     }   
 
-    fn call_sys() {
-        extern "C" { fn __call_sys(); }
+    fn hanle_exp() {
+        extern "C" { fn __handle_exp(); }
         unsafe{
-            __call_sys();
+            __handle_exp();
         }
     } 
 
     #[no_mangle]
-    fn distribute(_cx: &mut Context) {
+    fn distribute(cx: &mut Context) -> &mut Context {
         let scause = scause::read();
         // let stval = stval::read(),
         let sepc = sepc::read();
         println!("trap: cause: {:?}, epc: 0x{:#x}", scause.cause(), sepc);
 
         match scause.cause() {
+            Trap::Exception(Exception::Breakpoint) => {
+                breakpoint(&mut cx.sepc);
+            },
             Trap::Interrupt(Interrupt::SupervisorTimer) => {
                 println!("time");
+                crate::driver::timer::set_next_trigger();
             }
             // Trap::Exception(Exception::UserEnvCall) => {
                 // cx.inc_epc(4);
@@ -99,14 +104,24 @@ impl TrapHandler<Context> for Handler {
                     // trap::syscall::syscall(cx.syscall_id(), cx.fn_args()) as usize
                 // );
             // },
-            _ => {}
+            _ => {
+                println!("unsupported exception");
+            }
         }
+
+        cx
     }
     
-    fn ret_user(_cx_addr: usize) {
-        extern "C" { fn __ret_user(cx_addr: usize); }
+    fn expt_ret(_cx_addr: usize) {
+        extern "C" { fn __expt_ret(cx_addr: usize); }
         unsafe {
-            __ret_user(0);
+            __expt_ret(0);
         }        
     }
+}
+
+// TODO: why &mut usize
+fn breakpoint(sepc: &mut usize) {
+    println!("a breakpoint set @0x{:x}", sepc);
+    *sepc += 2;
 }

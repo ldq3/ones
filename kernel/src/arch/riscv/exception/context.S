@@ -10,10 +10,11 @@
     .globl __ret_user
     .align 2
 
-# call_sys()
-# trap into S mode from U mode 
-__call_sys:
+# handle_exp()
+# handle exception
+__handle_exp:
     # sp -> user stack, sscratch -> kernel stack, the next instruction will switch them
+    csrw sscratch, sp // FIXME
     csrrw sp, sscratch, sp
     # allocate a TrapContext on kernel stack
     addi sp, sp, -34*8
@@ -42,9 +43,9 @@ __call_sys:
     mv a0, sp
     call distribute
 
-# ret_user(cx: &mut Context)
-# back to U mode after handling trap
-__ret_user:
+# expt_ret(cx: &mut Context)
+# return after handling exception
+__expt_ret:
     mv sp, a0
     # restore sstatus, sepc and user stack pointer
     ld t0, 32*8(sp)

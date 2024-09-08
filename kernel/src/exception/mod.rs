@@ -21,9 +21,9 @@ pub trait Handler<T: Context> {
 
     fn into_user();
 
-    fn call_sys(); 
+    fn hanle_exp(); 
 
-    fn distribute(cx: &mut T);
+    fn distribute(cx: &mut T) -> &mut T;
     
-    fn ret_user(cx_addr: usize);
+    fn expt_ret(cx_addr: usize);
 }

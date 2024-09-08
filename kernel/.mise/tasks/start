@@ -1,5 +1,7 @@
 #! /usr/bin/env zsh
 # mise description="start kernel"
+cargo build --release
+
 tmux ls | grep -q "kernel"
 if [ $? -ne 0 ]; then
     echo "create session 'kernel'"

@@ -1,7 +1,7 @@
 use core::arch::global_asm;
 use crate::exception::{
-    Context as TrapContext,
-    Handler as TrapHandler,
+    ContextTrait as TrapContext,
+    HandlerTrait as TrapHandler,
 };
 use log::info;
 use riscv::register::{
@@ -51,6 +51,8 @@ impl TrapContext for Context {
 
 pub struct Handler;
 
+use crate::driver::timer::HandlerTrait;
+
 impl TrapHandler<Context> for Handler {
     fn init() {
         unsafe {
@@ -96,7 +98,7 @@ impl TrapHandler<Context> for Handler {
             },
             Trap::Interrupt(Interrupt::SupervisorTimer) => {
                 println!("time");
-                crate::driver::timer::set_next_trigger();
+                crate::driver::timer::Handler::set_next_trigger();
             }
             // Trap::Exception(Exception::UserEnvCall) => {
                 // cx.inc_epc(4);

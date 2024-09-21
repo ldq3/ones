@@ -3,8 +3,12 @@ pub mod sync_exception;
 pub mod async_exception;
 
 // use log::error;
+pub fn init() {
+    Handler::init();
+    enable_timer_interrupt();
+}
 
-pub trait Context {
+pub trait ContextTrait {
     fn set_sp(&mut self, sp: usize);
 
     fn inc_epc(&mut self, n: usize);
@@ -16,7 +20,7 @@ pub trait Context {
     fn syscall_id(&self) -> usize;
 }
 
-pub trait Handler<T: Context> {
+pub trait HandlerTrait<T: ContextTrait> {
     fn init();
 
     fn into_user();
@@ -27,3 +31,5 @@ pub trait Handler<T: Context> {
     
     fn expt_ret(cx_addr: usize);
 }
+
+pub use crate::arch_ins::exception::*;

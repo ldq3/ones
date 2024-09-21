@@ -5,12 +5,18 @@ const FREQ: usize = 12_500_000;
 const TICKS_PER_SEC: usize = 100;
 
 use riscv::register::time;
+use crate::driver::timer;
 
-pub fn now() -> usize {
-    time::read()
-}
+pub struct Handler{}
 
-pub fn set_next_trigger() {
-    let next_trigger = now() + FREQ / TICKS_PER_SEC;
-    sbi_rt::set_timer(next_trigger as _);
+impl timer::HandlerTrait for Handler {
+    fn now() -> usize {
+        time::read()
+    }
+    
+    fn set_next_trigger() {
+        let next_trigger = Self::now() + FREQ / TICKS_PER_SEC;
+        sbi_rt::set_timer(next_trigger as _);
+    }
 }
+ 

@@ -1,5 +1,9 @@
+use core::arch::global_asm;
+
 pub mod exception;
 pub mod timer;
+
+global_asm!(include_str!("entry.asm"));
 
 pub fn shutdown(failure: bool) -> ! {
     #[allow(deprecated)]

@@ -1,18 +1,18 @@
 #![no_main]
 #![no_std]
+#![feature(alloc_error_handler)]
 
 mod lang_items;
 mod logger;
-mod exception;
-mod arch;
-mod driver;
+mod inner;
+mod outer;
+
+extern crate alloc;
 
 use core::arch::global_asm;
 use log::info;
-// arch instance
-use arch::riscv as arch_ins;
 
-global_asm!(include_str!("arch/riscv/entry.asm"));
+global_asm!(include_str!("inner/cpu/arch/riscv/entry.asm"));
 
 #[no_mangle]
 pub fn kernel_main() -> ! {
@@ -20,8 +20,7 @@ pub fn kernel_main() -> ! {
     
     logger::init();
     
-    exception::init();
-    driver::timer::init();
+    inner::init();
 
     info!("Hello World!");
     panic!("Shutdown machine!");

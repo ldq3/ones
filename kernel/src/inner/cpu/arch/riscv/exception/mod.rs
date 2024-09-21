@@ -1,5 +1,5 @@
 use core::arch::global_asm;
-use crate::exception::{
+use crate::inner::cpu::exception::{
     ContextTrait as TrapContext,
     HandlerTrait as TrapHandler,
 };
@@ -51,7 +51,7 @@ impl TrapContext for Context {
 
 pub struct Handler;
 
-use crate::driver::timer::HandlerTrait;
+use crate::inner::cpu::timer::HandlerTrait;
 
 impl TrapHandler<Context> for Handler {
     fn init() {
@@ -98,7 +98,7 @@ impl TrapHandler<Context> for Handler {
             },
             Trap::Interrupt(Interrupt::SupervisorTimer) => {
                 println!("time");
-                crate::driver::timer::Handler::set_next_trigger();
+                crate::inner::cpu::timer::Handler::set_next_trigger();
             }
             // Trap::Exception(Exception::UserEnvCall) => {
                 // cx.inc_epc(4);

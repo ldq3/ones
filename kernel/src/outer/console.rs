@@ -27,3 +27,17 @@ pub fn print(args: fmt::Arguments) {
 //         format_args!("\u{1B}[{}m{}\u{1B}[0m", $color_code as u8, $args)
 //     };
 // }
+
+#[macro_export]
+macro_rules! print {
+    ($fmt: literal $(, $($arg: tt)+)?) => {
+        $crate::outer::console::print(format_args!($fmt $(, $($arg)+)?));
+    }
+}
+
+#[macro_export]
+macro_rules! println {
+    ($fmt: literal $(, $($arg: tt)+)?) => {
+        $crate::outer::console::print(format_args!(concat!($fmt, "\n") $(, $($arg)+)?));
+    };
+}

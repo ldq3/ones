@@ -1,3 +1,6 @@
+pub mod exception;
+pub mod timer;
+
 pub fn shutdown(failure: bool) -> ! {
     #[allow(deprecated)]
     use sbi_rt::{ system_reset, NoReason, Shutdown, SystemFailure };

@@ -6,8 +6,11 @@ mod lang_items;
 mod logger;
 mod inner;
 mod outer;
+mod sync;
 
 extern crate alloc;
+#[macro_use]
+extern crate bitflags;
 
 use log::info;
 

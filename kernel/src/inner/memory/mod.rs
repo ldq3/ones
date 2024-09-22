@@ -1,7 +1,12 @@
+pub const MEMORY_END: usize = 0x80_800_000;
+pub const KERNEL_HEAP_SIZE: usize = 0x800_000;
+
+mod vitualize;
+mod frame;
+mod page_table;
+
 use buddy_system_allocator::LockedHeap;
 use crate::println;
-
-pub const KERNEL_HEAP_SIZE: usize = 0x800_000;
 
 #[global_allocator]
 static HEAP_ALLOCATOR: LockedHeap = LockedHeap::empty();
@@ -22,7 +27,7 @@ pub fn handle_alloc_error(layout: core::alloc::Layout) -> ! {
 }
 
 #[allow(unused)]
-pub fn heap_test() {
+pub fn test_heap() {
     use alloc::boxed::Box;
     use alloc::vec::Vec;
     extern "C" {

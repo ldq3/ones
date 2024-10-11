@@ -1,8 +1,13 @@
 use alloc::vec;
 use alloc::vec::Vec;
 
-use super::{FrameRV, PageNumRv39, FrameNumRv, PhysicalAddressRv64};
-use crate::inner::memory::page::{FrameNum, Frame, Flags, PageTableEntry, PageTableEntryTrait};
+use super::{ FrameRV, PageNumRv39, FrameNumRv, PhysicalAddressRv64 };
+use crate::inner::memory::page::{
+    FrameNum, Frame,
+    table::{ 
+        Flags, PageTableEntry, PageTableEntryTrait, PageTable
+    }
+};
 
 use bitflags::*;
 bitflags! {
@@ -71,8 +76,6 @@ pub struct PageTableRv39 {
     // }
 // }
 
-use crate::inner::memory::page::PageTable;
-
 impl PageTable for PageTableRv39 {
     type PageNum = PageNumRv39;
     
@@ -94,21 +97,59 @@ impl PageTable for PageTableRv39 {
     }
     
     fn insert(&mut self, page_num: Self::PageNum, pte: PageTableEntry) -> Result<(), ()> {
-        Err(())
+        let index = index(page_num);
+        let mut existed = true;
+
+        let mut pte_before = &mut get_ptes_in_frame(self.root)[index[0]];    
+        for i in 1..3 {
+            if !pte_before.is_valid() {
+                existed = false;
+
+                let frame = FrameRV::new().unwrap();
+                *pte_before = PageTableEntry::new(frame.ppn, FlagsRv::V);
+                self.frames.push(frame);
+            }
+
+            pte_before = &mut get_ptes_in_frame(pte_before.frame_num())[index[i]];
+        }
+
+        if !pte_before.is_valid() {
+            existed = false;
+
+            let frame = FrameRV::new().unwrap();
+            *pte_before = PageTableEntry::new(frame.ppn, FlagsRv::V);
+            self.frames.push(frame);
+        }
+
+        if existed == true {
+            Err(())
+        } else {
+            *pte_before = pte;
+
+            Ok(())
+        }
     }
 
     fn remove(&mut self, page_num: Self::PageNum) -> Result<(), ()> {
-        let res_get = self.get(page_num);     
-
-        let mut pte = res_get.unwrap();
-    
-        pte = PageTableEntry::empty();
-
-        Err(())
+        let res = get_mut_ref(self, page_num);
+        match res {
+            Ok(pte) => {
+                *pte = PageTableEntry::empty();
+                Ok(())
+            },
+            Err(()) => Err(())
+        }
     }
 
     fn replace(&mut self, page_num: Self::PageNum, pte: PageTableEntry) -> Result<(), ()> {
-        Err(())
+        let res = get_mut_ref(self, page_num);
+        match res {
+            Ok(pte_before) => {
+                *pte_before = pte;
+                Ok(())
+            },
+            Err(()) => Err(())
+        }
     }
 
     fn get(&self, page_num: Self::PageNum) -> Result<PageTableEntry, ()> {

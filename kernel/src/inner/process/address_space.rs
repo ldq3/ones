@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 
 use crate::inner::memory::{
-    page::PageTable,
+    page::table::PageTable,
     segment::Segment
 };
 

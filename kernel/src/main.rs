@@ -1,6 +1,7 @@
 #![no_main]
 #![no_std]
 #![feature(alloc_error_handler)]
+#![allow(unused)] // #FIXME
 
 mod lang_items;
 mod logger;

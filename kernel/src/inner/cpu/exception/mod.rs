@@ -32,4 +32,4 @@ pub trait HandlerTrait<T: ContextTrait> {
     fn expt_ret(cx_addr: usize);
 }
 
-pub use super::arch_ins::exception::*;
+pub use super::super::arch_ins::cpu::exception::*;

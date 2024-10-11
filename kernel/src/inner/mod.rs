@@ -1,11 +1,15 @@
 pub mod cpu;
 mod memory;
+mod process;
+mod arch;
+
+pub use arch::riscv64 as arch_ins; // architecture instance
 
 pub fn init() {
     clear_bss();
     cpu::init();
-    memory::init_heap();
-    memory::test_heap();
+    memory::heap::init_heap();
+    memory::heap::test_heap();
 }
 
 fn clear_bss() {

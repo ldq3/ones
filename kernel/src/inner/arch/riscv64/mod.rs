@@ -1,7 +1,8 @@
 use core::arch::global_asm;
 
-pub mod exception;
-pub mod timer;
+pub mod cpu;
+mod memory;
+mod process;
 
 global_asm!(include_str!("entry.asm"));
 

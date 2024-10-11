@@ -8,4 +8,4 @@ pub fn init() {
     Handler::set_next_trigger();
 }
 
-pub use super::arch_ins::timer::*;
+pub use super::super::arch_ins::cpu::timer::*;

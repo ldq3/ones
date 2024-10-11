@@ -110,4 +110,5 @@ pub trait PageTable: Sized {
     fn remove(&mut self, page_num: Self::PageNum) -> Result<(), ()>;
     fn replace(&mut self, page_num: Self::PageNum, pte: PageTableEntry) -> Result<(), ()>;
     fn get(&self, page_num: Self::PageNum) -> Result<PageTableEntry, ()>;
+    fn get_create(&mut self, page_num: Self::PageNum) -> PageTableEntry;
 }

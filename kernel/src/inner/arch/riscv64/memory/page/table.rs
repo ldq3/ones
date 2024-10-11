@@ -112,28 +112,45 @@ impl PageTable for PageTableRv39 {
     }
 
     fn get(&self, page_num: Self::PageNum) -> Result<PageTableEntry, ()> {
-        let mut page_num_int: usize = page_num.into();
+        let index = index(page_num);
 
-        let mut level = [0usize; 3];
-
-        for i in (0..3).rev() {        
-            level[i] = page_num_int & 0b111_111_111;
-            page_num_int >>= 9;
-        }
-
-        let mut pte = PageTableEntry::empty();
-        let mut ppn = self.root;
-        
-        for offset in level {
-            pte = get_ptes_in_frame(ppn)[offset];
+        let mut pte = get_ptes_in_frame(self.root)[index[0]];
+        for i in 1..3 {
             if !pte.is_valid() {
                 return Err(());
             }
 
-            ppn = pte.frame_num();
+            pte = get_ptes_in_frame(pte.frame_num())[index[i]];
+        }
+
+        if !pte.is_valid() {
+            return Err(());
         }
 
         Ok(pte)
+    }
+
+    fn get_create(&mut self, page_num: Self::PageNum) -> PageTableEntry {
+        let index = index(page_num);
+
+        let mut pte = &mut get_ptes_in_frame(self.root)[index[0]];    
+        for i in 1..3 {
+            if !pte.is_valid() {
+                let frame = FrameRV::new().unwrap();
+                *pte = PageTableEntry::new(frame.ppn, FlagsRv::V);
+                self.frames.push(frame);
+            }
+    
+            pte = &mut get_ptes_in_frame(pte.frame_num())[index[i]];
+        }
+
+        if !pte.is_valid() {
+            let frame = FrameRV::new().unwrap();
+            *pte = PageTableEntry::new(frame.ppn, FlagsRv::V);
+            self.frames.push(frame);
+        }
+
+        *pte
     }
 }
 
@@ -145,31 +162,57 @@ fn get_ptes_in_frame(frame_num: FrameNumRv) -> &'static mut [PageTableEntry] {
     unsafe { core::slice::from_raw_parts_mut(physical_address.0 as *mut PageTableEntry, 512) }
 }
 
-fn get_pte_mut_ref(page_table: &mut PageTableRv39, page_num: PageNumRv39) -> &mut PageTableEntry {
+fn index(page_num: PageNumRv39) -> [usize; 3] {
+    let mut index = [0usize; 3];
+
     let mut page_num_int: usize = page_num.into();
-
-    let mut level = [0usize; 3];
-
-    for i in (0..3).rev() {        
-        level[i] = page_num_int & 0b111_111_111;
+    index[2] = page_num_int & 0b111_111_111;
+    for i in (0..2).rev() {        
         page_num_int >>= 9;
+        index[i] = page_num_int & 0b111_111_111;
     }
 
-     let mut result: Option<&mut PageTableEntry> = None;
-    let mut ppn = page_table.root;
-    
-    for offset in level {
-        let pte = &mut get_ptes_in_frame(ppn)[offset];
+    index
+}
+
+fn get_mut_ref(page_table: &mut PageTableRv39, page_num: PageNumRv39) -> Result<&mut PageTableEntry, ()> {
+    let index = index(page_num);
+
+    let mut pte = &mut get_ptes_in_frame(page_table.root)[index[0]];
+    for i in 1..3 {
+        if !pte.is_valid() {
+            return Err(());
+        }
+
+        pte = &mut get_ptes_in_frame(pte.frame_num())[index[i]];
+    }
+
+    if !pte.is_valid() {
+        return Err(());
+    }
+
+    Ok(pte)
+}
+
+fn get_mut_ref_create(page_table: &mut PageTableRv39, page_num: PageNumRv39) -> &mut PageTableEntry {
+    let index = index(page_num);
+
+    let mut pte = &mut get_ptes_in_frame(page_table.root)[index[0]];    
+    for i in 1..3 {
         if !pte.is_valid() {
             let frame = FrameRV::new().unwrap();
             *pte = PageTableEntry::new(frame.ppn, FlagsRv::V);
             page_table.frames.push(frame);
         }
-
-        ppn = pte.frame_num();
-
-        result = Some(pte);
+    
+        pte = &mut get_ptes_in_frame(pte.frame_num())[index[i]];
     }
 
-    result.unwrap()
+    if !pte.is_valid() {
+        let frame = FrameRV::new().unwrap();
+        *pte = PageTableEntry::new(frame.ppn, FlagsRv::V);
+        page_table.frames.push(frame);
+    }
+
+    pte
 }

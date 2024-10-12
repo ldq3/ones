@@ -1,6 +1,7 @@
+pub mod frame;
 pub mod table;
 
-pub trait FrameNum: Into<usize> + From<usize> {
+pub trait FrameNum: Into<usize> + From<usize> + Copy + Clone {
     type PhysicalAddress: PhysicalAddress;
 
     fn physical_address(&self) -> Self::PhysicalAddress;

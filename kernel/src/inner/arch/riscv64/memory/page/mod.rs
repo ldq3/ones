@@ -103,65 +103,12 @@ pub fn init() {
         .init(PhysicalAddressRv64::from(ekernel as usize).ceil_frame_num(), PhysicalAddressRv64::from(MEMORY_END).frame_num());
 }
 
+use crate::inner::memory::page::frame::Manager as FrameManager; 
+
 lazy_static! {
-    static ref FRAME_MANAGER: UPSafeCell<FrameManager> = unsafe {
+    static ref FRAME_MANAGER: UPSafeCell<FrameManager<FrameNumRv>> = unsafe {
         UPSafeCell::new(FrameManager::new())
     };
-}
-
-/**
-the range [current, end) represents physical page numbers that have never been allocated before
-
-the stack 'recycled' saves the physical page numbers that have been deallocated after being allocated.
-*/
-pub struct FrameManager {
-    current: FrameNumRv,
-    end: FrameNumRv,
-    recycled: Vec<FrameNumRv>,
-}
-
-impl FrameManager {
-    pub fn init(&mut self, l: FrameNumRv, r: FrameNumRv) {
-        self.current = l;
-        self.end = r;
-    }
-
-    pub fn new() -> Self {
-        Self {
-            current: 0.into(),
-            end: 0.into(),
-            recycled: Vec::new(),
-        }
-    }
-
-    pub fn alloc(&mut self) -> Result<FrameNumRv, ()> {
-        if let Some(ppn) = self.recycled.pop() {
-            Ok(ppn.into())
-        } else {
-            if self.current.0 == self.end.0 {
-                Err(())
-            } else {
-                self.current.0 += 1;
-                Ok((self.current.0 - 1).into())
-            }
-        }
-    }
-
-    pub fn dealloc(&mut self, ppn: FrameNumRv) -> Result<(), ()>{
-        let ppn = ppn;
-        // validity check
-        if ppn.0 >= self.current.0 || self.recycled
-            .iter()
-            .find(|&v| {v.0 == ppn.0})
-            .is_some() {
-            // frame has not been allocated
-            return Err(())
-        }
-        // recycle
-        self.recycled.push(ppn);
-
-        Ok(())
-    }
 }
 
 #[derive(Clone, Copy)]

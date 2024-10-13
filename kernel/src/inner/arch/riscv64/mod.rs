@@ -1,7 +1,7 @@
 use core::arch::global_asm;
 
 pub mod cpu;
-mod memory;
+pub mod memory;
 mod process;
 
 global_asm!(include_str!("entry.asm"));

@@ -1,9 +1,10 @@
 use alloc::vec;
 use alloc::vec::Vec;
 
-use super::{ FrameRV, PageNumRv39, FrameNumRv, PhysicalAddressRv64 };
+use super::PageNumRv39;
+use super::frame::{ Number, PhysicalAddressRv64 };
 use crate::inner::memory::page::{
-    FrameNum, Frame,
+    frame::{ NumberOperation, Frame },
     table::{ 
         Flags, PageTableEntry, PageTableEntryTrait, PageTable
     }
@@ -37,7 +38,7 @@ impl Flags for FlagsRv {
 
 impl PageTableEntryTrait for PageTableEntry {
     type Flags = FlagsRv;
-    type FrameNum = FrameNumRv;
+    type FrameNum = Number;
 
     fn new(frame_num: Self::FrameNum, flags: Self::Flags) -> Self {
         let frame_num_int: usize = frame_num.into();
@@ -64,7 +65,7 @@ impl PageTableEntryTrait for PageTableEntry {
 the frames hold the ownership of Frame
 */
 pub struct PageTableRv39 {
-    root: FrameNumRv,
+    root: Number,
     frames: Vec<FrameRV>,
 }
 

@@ -10,7 +10,6 @@ pub fn init() {
     clear_bss();
     cpu::init();
     memory::heap::init_heap();
-    memory::heap::test_heap();
 }
 
 fn clear_bss() {

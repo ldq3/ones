@@ -1,4 +1,4 @@
-use super::{ FrameNum, PageNum };
+use super::{ frame::NumberOperation, PageNum };
 
 pub trait Flags {
     fn readable(&self) -> bool;
@@ -13,7 +13,7 @@ pub struct PageTableEntry {
 }
 
 pub trait PageTableEntryTrait {
-    type FrameNum: FrameNum;
+    type FrameNum: NumberOperation;
     type Flags: Flags;
     
     fn empty() -> PageTableEntry {

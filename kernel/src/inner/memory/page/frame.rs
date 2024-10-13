@@ -114,7 +114,7 @@ pub struct Frame {
 }
 
 impl Frame {
-    fn new() -> Result<Self, ()> {
+    pub fn new() -> Result<Self, ()> {
         let res_alloc = FRAME_MANAGER
         .exclusive_access()
         .alloc();

@@ -2,7 +2,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 
 use super::PageNumRv39;
-use super::frame::{ Number, PhysicalAddressRv64 };
+use super::frame::{ self, PhysicalAddressRv64 };
 use crate::inner::memory::page::{
     frame::{ NumberOperation, Frame },
     table::{ 
@@ -38,7 +38,7 @@ impl Flags for FlagsRv {
 
 impl PageTableEntryTrait for PageTableEntry {
     type Flags = FlagsRv;
-    type FrameNum = Number;
+    type FrameNum = frame::Number;
 
     fn new(frame_num: Self::FrameNum, flags: Self::Flags) -> Self {
         let frame_num_int: usize = frame_num.into();
@@ -65,8 +65,8 @@ impl PageTableEntryTrait for PageTableEntry {
 the frames hold the ownership of Frame
 */
 pub struct PageTableRv39 {
-    root: Number,
-    frames: Vec<FrameRV>,
+    root: frame::Number,
+    frames: Vec<Frame>,
 }
 
 // impl PageTableEntryTrait<FrameRV, PTEFlags> for PageTableEntry {
@@ -81,7 +81,7 @@ impl PageTable for PageTableRv39 {
     type PageNum = PageNumRv39;
     
     fn new() -> Result<Self, ()> {
-        let res_frame = FrameRV::new();
+        let res_frame = Frame::new();
         
         match res_frame {
             Ok(frame) => {
@@ -106,7 +106,7 @@ impl PageTable for PageTableRv39 {
             if !pte_before.is_valid() {
                 existed = false;
 
-                let frame = FrameRV::new().unwrap();
+                let frame = Frame::new().unwrap();
                 *pte_before = PageTableEntry::new(frame.ppn, FlagsRv::V);
                 self.frames.push(frame);
             }
@@ -117,7 +117,7 @@ impl PageTable for PageTableRv39 {
         if !pte_before.is_valid() {
             existed = false;
 
-            let frame = FrameRV::new().unwrap();
+            let frame = Frame::new().unwrap();
             *pte_before = PageTableEntry::new(frame.ppn, FlagsRv::V);
             self.frames.push(frame);
         }
@@ -178,7 +178,7 @@ impl PageTable for PageTableRv39 {
         let mut pte = &mut get_ptes_in_frame(self.root)[index[0]];    
         for i in 1..3 {
             if !pte.is_valid() {
-                let frame = FrameRV::new().unwrap();
+                let frame = Frame::new().unwrap();
                 *pte = PageTableEntry::new(frame.ppn, FlagsRv::V);
                 self.frames.push(frame);
             }
@@ -187,7 +187,7 @@ impl PageTable for PageTableRv39 {
         }
 
         if !pte.is_valid() {
-            let frame = FrameRV::new().unwrap();
+            let frame = Frame::new().unwrap();
             *pte = PageTableEntry::new(frame.ppn, FlagsRv::V);
             self.frames.push(frame);
         }
@@ -199,9 +199,9 @@ impl PageTable for PageTableRv39 {
 /**
 get all(512) page table entrys in a frame
 */
-fn get_ptes_in_frame(frame_num: FrameNumRv) -> &'static mut [PageTableEntry] {
-    let physical_address = frame_num.physical_address();
-    unsafe { core::slice::from_raw_parts_mut(physical_address.0 as *mut PageTableEntry, 512) }
+fn get_ptes_in_frame(frame_num: frame::Number) -> &'static mut [PageTableEntry] {
+    let physical_address: usize = frame_num.physical_address().into();
+    unsafe { core::slice::from_raw_parts_mut(physical_address as *mut PageTableEntry, 512) }
 }
 
 fn index(page_num: PageNumRv39) -> [usize; 3] {
@@ -242,7 +242,7 @@ fn get_mut_ref_create(page_table: &mut PageTableRv39, page_num: PageNumRv39) -> 
     let mut pte = &mut get_ptes_in_frame(page_table.root)[index[0]];    
     for i in 1..3 {
         if !pte.is_valid() {
-            let frame = FrameRV::new().unwrap();
+            let frame = Frame::new().unwrap();
             *pte = PageTableEntry::new(frame.ppn, FlagsRv::V);
             page_table.frames.push(frame);
         }
@@ -251,7 +251,7 @@ fn get_mut_ref_create(page_table: &mut PageTableRv39, page_num: PageNumRv39) -> 
     }
 
     if !pte.is_valid() {
-        let frame = FrameRV::new().unwrap();
+        let frame = Frame::new().unwrap();
         *pte = PageTableEntry::new(frame.ppn, FlagsRv::V);
         page_table.frames.push(frame);
     }

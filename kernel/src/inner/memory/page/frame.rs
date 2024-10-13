@@ -1,41 +1,29 @@
-use crate::inner::arch_ins::memory::page::frame;
+use crate::inner::arch_ins::memory::page::frame::{ ADDRESS_WIDTH, OFFSET_WIDTH };
 
-use crate::sync::UPSafeCell;
-use alloc::vec::Vec;
-use lazy_static::*;
-
-lazy_static! {
-    static ref FRAME_MANAGER: UPSafeCell<Manager> = unsafe {
-        UPSafeCell::new(Manager::new())
-    };
-}
+pub const ADDRESS_MASK: usize = (1 << ADDRESS_WIDTH) - 1;
+pub const OFFSET_MASK: usize = (1 << OFFSET_WIDTH) - 1;
+pub const NUMBER_MASK: usize = (1 << (ADDRESS_WIDTH - OFFSET_WIDTH)) - 1;
 
 pub fn init() {
     extern "C" {
         fn ekernel();
     }
-    FRAME_MANAGER
-        .exclusive_access()
-        .init(frame::PhysicalAddressRv64::from(ekernel as usize).ceil_frame_num(), frame::PhysicalAddressRv64::from(crate::inner::arch_ins::memory::MEMORY_END).frame_num());
+
+    MANAGER.exclusive_access()
+    .init(Address::from(ekernel as usize).ceil_number(), Address::from(crate::inner::arch_ins::memory::MEMORY_END).number());
 }
 
 #[derive(Clone, Copy)]
-pub struct Number(pub usize);
+pub struct Address(pub usize);
 
-pub trait NumberOperation: Into<usize> + From<usize> {
-    type PhysicalAddress: PhysicalAddress;
-
-    fn physical_address(&self) -> Self::PhysicalAddress;
-}
-
-pub trait PhysicalAddress: From<usize> + Into<usize> {
-    fn frame_num(&self) -> Number;
+pub trait AddressOperation: From<usize> + Into<usize> {
+    fn number(&self) -> Number;
 
     fn offset(&self) -> usize;
 
     #[inline]
-    fn ceil_frame_num(&self) -> Number {
-        let frame_num_int: usize = self.frame_num().into();
+    fn ceil_number(&self) -> Number {
+        let frame_num_int: usize = self.number().into();
         
         if self.offset() == 0 {
             frame_num_int.into()
@@ -44,6 +32,83 @@ pub trait PhysicalAddress: From<usize> + Into<usize> {
         }
     }
 }
+
+impl From<usize> for Address {
+    fn from(value: usize) -> Self {
+        Self(value & ADDRESS_MASK)
+    }
+}
+
+impl Into<usize> for Address {
+    fn into(self) -> usize {
+        self.0
+    }
+}
+
+impl AddressOperation for Address {
+    #[inline]
+    fn number(&self) -> Number {
+        self.0.into()
+    }
+
+    #[inline]
+    fn offset(&self) -> usize {
+        self.0 & OFFSET_MASK
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct Number(pub usize);
+
+pub trait NumberOperation: Into<usize> + From<usize> {
+    fn address(&self) -> Address;
+}
+
+impl From<usize> for Number {
+    fn from(value: usize) -> Self {
+        Self(value & NUMBER_MASK)
+    }
+}
+
+impl Into<usize> for Number {
+    fn into(self) -> usize {
+        self.0
+    }
+}
+
+impl NumberOperation for Number { 
+    fn address(&self) -> Address {
+        Address(self.0 << OFFSET_WIDTH)
+    }
+}
+
+pub struct Frame {
+    pub number: Number,
+}
+
+impl Frame {
+    pub fn new() -> Result<Self, ()> {
+        let alloc_result = MANAGER
+        .exclusive_access()
+        .alloc();
+
+        match alloc_result {
+            Ok(number) => Ok(Self { number }),
+            Err(_) => Err(())
+        }        
+    }
+}
+
+// can't impl Drop for speci
+impl Drop for Frame {
+    fn drop(&mut self) {
+        MANAGER
+        .exclusive_access()
+        .dealloc(self.number);
+    }
+}
+
+use alloc::vec::Vec;
 
 /**
 the range [current, end) represents physical page numbers that have never been allocated before
@@ -87,8 +152,8 @@ impl Manager {
         }
     }
 
-    pub fn dealloc(&mut self, frame_num: Number) -> Result<(), ()>{
-        let frame_num_int: usize = frame_num.into();
+    pub fn dealloc(&mut self, number: Number) -> Result<(), ()>{
+        let frame_num_int: usize = number.into();
         let current_int: usize = self.current.into();
 
         // validity check
@@ -103,34 +168,16 @@ impl Manager {
             return Err(())
         }
         // recycle
-        self.recycled.push(frame_num);
+        self.recycled.push(number);
 
         Ok(())
     }
 }
 
-pub struct Frame {
-    pub ppn: Number,
-}
-
-impl Frame {
-    pub fn new() -> Result<Self, ()> {
-        let res_alloc = FRAME_MANAGER
-        .exclusive_access()
-        .alloc();
-
-        match res_alloc {
-            Ok(ppn) => Ok(Self { ppn }),
-            Err(_) => Err(())
-        }        
-    }
-}
-
-// can't impl Drop for speci
-impl Drop for Frame {
-    fn drop(&mut self) {
-        FRAME_MANAGER
-        .exclusive_access()
-        .dealloc(self.ppn);
-    }
+use lazy_static::*;
+use crate::sync::UPSafeCell;
+lazy_static! {
+    static ref MANAGER: UPSafeCell<Manager> = unsafe {
+        UPSafeCell::new(Manager::new())
+    };
 }

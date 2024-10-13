@@ -12,8 +12,6 @@ use alloc::vec;
 use alloc::vec::Vec;
 use riscv::addr::Page;
 
-use crate::inner::memory::page::frame::Manager as FrameManager; 
-
 #[derive(Clone, Copy)]
 pub struct PageNumRv39(usize);
 pub struct VirtualAddressRv39(usize);

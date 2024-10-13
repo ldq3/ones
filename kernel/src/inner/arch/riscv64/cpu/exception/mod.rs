@@ -1,6 +1,6 @@
 use core::arch::global_asm;
 use crate::inner::cpu::exception::{
-    ContextTrait as TrapContext,
+    Context as TrapContext,
     HandlerTrait as TrapHandler,
 };
 use log::info;
@@ -36,6 +36,7 @@ impl TrapContext for Context {
         self.sepc += n;
     }
 
+    // function support
     fn set_ret(&mut self, ret: usize) {
         self.x[10] = ret;
     }
@@ -49,44 +50,28 @@ impl TrapContext for Context {
     }
 }
 
-pub struct Handler;
+pub struct HandlerRv;
 
 use crate::inner::cpu::timer::HandlerTrait;
+use crate::inner::process::address_space::config::CONTEXT_ADDR;
 
-impl TrapHandler<Context> for Handler {
+impl TrapHandler<Context> for HandlerRv {
     fn init() {
+        extern "C" { fn handler(cx_addr: usize); }
         unsafe {
-            stvec::write(Self::hanle_exp as usize, TrapMode::Direct);
+            stvec::write(handler as usize, TrapMode::Direct);
             sstatus::set_sie();
         }
 
         info!("init trap handler")
-    }
-    
-    fn into_user() {
-        let mut sstatus = sstatus::read();
-        sstatus.set_spp(SPP::User);
-
-        let mut cx = Context {
-            x: [0; 32],
-            sstatus,
-            sepc: 0, // FIXME: the sepc should be the first instruction of user app
-        };
-
-        cx.set_sp(0);
-
-        Self::expt_ret(0);
     }   
 
-    fn hanle_exp() {
-        extern "C" { fn __handle_exp(); }
-        unsafe{
-            __handle_exp();
-        }
-    } 
-
     #[no_mangle]
-    fn distribute(cx: &mut Context) -> &mut Context {
+    fn distribute() {
+        let mut cx = unsafe {
+            core::ptr::read(CONTEXT_ADDR as *const Context)
+        };
+
         let scause = scause::read();
         // let stval = stval::read(),
         let sepc = sepc::read();
@@ -110,19 +95,14 @@ impl TrapHandler<Context> for Handler {
                 println!("unsupported exception");
             }
         }
-
-        cx
     }
     
-    fn expt_ret(_cx_addr: usize) {
-        extern "C" { fn __expt_ret(cx_addr: usize); }
-        unsafe {
-            __expt_ret(0);
-        }        
+    #[no_mangle]
+    fn get_kernel_context() {
+       
     }
 }
 
-// TODO: why &mut usize
 fn breakpoint(sepc: &mut usize) {
     println!("a breakpoint set @0x{:x}", sepc);
     *sepc += 2;

@@ -5,6 +5,7 @@
 		"jscearcy.rust-doc-viewer",
 		"swellaby.vscode-rust-test-adapter",
 		"lorenzopirro.rust-flash-snippets",
-		"conradludgate.rust-playground"
+		"conradludgate.rust-playground",
+		"zhwu95.riscv"
 	]
 }

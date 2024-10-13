@@ -1,15 +1,10 @@
-pub trait Segment {
-    fn get_base(&self) -> usize;
-    fn get_limit(&self) -> usize;
-    fn set_base(&mut self, base: usize);
-    fn set_limit(&mut self, limit: usize);
+pub struct Segment {
+    base: usize,
+    limit: usize,
+    growth: u8,
+    flags: u8,
 }
 
-pub trait SegmentTable {
-    fn get_base(&self) -> usize;
-    fn get_limit(&self) -> usize;
-    fn set_base(&mut self, base: usize);
-    fn set_limit(&mut self, limit: usize);
-}
+pub struct SegmentTable {
 
-// Growth Direction
+}

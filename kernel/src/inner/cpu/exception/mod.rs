@@ -4,11 +4,26 @@ pub mod async_exception;
 
 // use log::error;
 pub fn init() {
-    Handler::init();
+    HandlerRv::init();
     enable_timer_interrupt();
 }
+    
+// fn into_user() {
+    // let mut sstatus = sstatus::read();
+    // sstatus.set_spp(SPP::User);
 
-pub trait ContextTrait {
+    // let mut cx = Context {
+        // x: [0; 32],
+        // sstatus,
+        // sepc: 0, // FIXME: the sepc should be the first instruction of user app
+    // };
+
+    // cx.set_sp(0);
+
+    // Self::expt_ret(0);
+// }
+
+pub trait Context {
     fn set_sp(&mut self, sp: usize);
 
     fn inc_epc(&mut self, n: usize);
@@ -20,16 +35,10 @@ pub trait ContextTrait {
     fn syscall_id(&self) -> usize;
 }
 
-pub trait HandlerTrait<T: ContextTrait> {
+pub trait HandlerTrait<T: Context> {
     fn init();
-
-    fn into_user();
-
-    fn hanle_exp(); 
-
-    fn distribute(cx: &mut T) -> &mut T;
-    
-    fn expt_ret(cx_addr: usize);
+    fn distribute();
+    fn get_kernel_context();
 }
 
-pub use super::super::arch_ins::cpu::exception::*;
+pub use crate::inner::arch_ins::cpu::exception::*;

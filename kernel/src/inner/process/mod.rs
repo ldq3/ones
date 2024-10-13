@@ -1,3 +1,3 @@
-mod address_space;
+pub mod address_space;
 
 // context switching

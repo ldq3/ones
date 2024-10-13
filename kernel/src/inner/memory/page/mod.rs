@@ -1,6 +1,10 @@
 pub mod frame;
 pub mod table;
 
+pub mod config {
+    
+}
+
 pub trait FrameNum: Into<usize> + From<usize> + Copy + Clone {
     type PhysicalAddress: PhysicalAddress;
 

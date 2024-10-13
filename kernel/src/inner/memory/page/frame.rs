@@ -16,23 +16,6 @@ pub fn init() {
 #[derive(Clone, Copy)]
 pub struct Address(pub usize);
 
-pub trait AddressOperation: From<usize> + Into<usize> {
-    fn number(&self) -> Number;
-
-    fn offset(&self) -> usize;
-
-    #[inline]
-    fn ceil_number(&self) -> Number {
-        let frame_num_int: usize = self.number().into();
-        
-        if self.offset() == 0 {
-            frame_num_int.into()
-        } else {
-            (frame_num_int + 1).into()
-        }
-    }
-}
-
 impl From<usize> for Address {
     fn from(value: usize) -> Self {
         Self(value & ADDRESS_MASK)
@@ -45,24 +28,31 @@ impl Into<usize> for Address {
     }
 }
 
-impl AddressOperation for Address {
+impl Address {
     #[inline]
     fn number(&self) -> Number {
-        self.0.into()
+        Number(self.0 >> OFFSET_WIDTH)
     }
 
     #[inline]
     fn offset(&self) -> usize {
         self.0 & OFFSET_MASK
     }
+    
+    #[inline]
+    fn ceil_number(&self) -> Number {
+        let frame_num_int: usize = self.number().into();
+        
+        if self.offset() == 0 {
+            frame_num_int.into()
+        } else {
+            (frame_num_int + 1).into()
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
 pub struct Number(pub usize);
-
-pub trait NumberOperation: Into<usize> + From<usize> {
-    fn address(&self) -> Address;
-}
 
 impl From<usize> for Number {
     fn from(value: usize) -> Self {
@@ -76,8 +66,8 @@ impl Into<usize> for Number {
     }
 }
 
-impl NumberOperation for Number { 
-    fn address(&self) -> Address {
+impl Number { 
+    pub fn address(&self) -> Address {
         Address(self.0 << OFFSET_WIDTH)
     }
 }

@@ -2,9 +2,8 @@ use alloc::vec;
 use alloc::vec::Vec;
 
 use super::PageNumRv39;
-use super::frame::{ self, Address };
+use super::frame::{ self, Frame };
 use crate::inner::memory::page::{
-    frame::{ NumberOperation, Frame },
     table::{ 
         Flags, PageTableEntry, PageTableEntryTrait, PageTable
     }
@@ -38,9 +37,8 @@ impl Flags for FlagsRv {
 
 impl PageTableEntryTrait for PageTableEntry {
     type Flags = FlagsRv;
-    type FrameNum = frame::Number;
 
-    fn new(frame_num: Self::FrameNum, flags: Self::Flags) -> Self {
+    fn new(frame_num: frame::Number, flags: Self::Flags) -> Self {
         let frame_num_int: usize = frame_num.into();
 
         PageTableEntry {
@@ -56,7 +54,7 @@ impl PageTableEntryTrait for PageTableEntry {
         (self.flags() & FlagsRv::V) != FlagsRv::empty()
     }
 
-    fn frame_num(&self) -> Self::FrameNum {
+    fn frame_num(&self) -> frame::Number {
         (self.bits >> 10 & ((1usize << 44) - 1)).into()
     }
 }

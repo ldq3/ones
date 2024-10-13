@@ -1,10 +1,12 @@
 pub mod sync_exception;
 pub mod async_exception;
 
+use crate::inner::arch_ins::cpu::exception;
+
 // use log::error;
 pub fn init() {
-    HandlerRv::init();
-    enable_timer_interrupt();
+    exception::Handler::init();
+    exception::enable_timer_interrupt();
 }
     
 // fn into_user() {
@@ -45,5 +47,3 @@ pub trait Handler {
     fn distribute();
     fn get_kernel_context() -> Self::KernelContext;
 }
-
-pub use crate::inner::arch_ins::cpu::exception::*;

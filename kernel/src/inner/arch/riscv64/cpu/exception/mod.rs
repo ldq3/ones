@@ -1,8 +1,4 @@
-use crate::inner::cpu::exception::{
-    Context,
-    KernelContext,
-    Handler,
-};
+use crate::inner::cpu::exception;
 
 use core::arch::global_asm;
 use log::info;
@@ -21,24 +17,24 @@ pub fn enable_timer_interrupt() {
     }
 }
 
-pub struct ContextRv {
+pub struct Context {
     x: [usize; 32],
     sstatus: Sstatus,
     sepc: usize,
 }
 
-pub struct KernelContextRv {
+pub struct KernelContext {
     satp: usize,
     sp: usize
 }
 
-impl KernelContext for KernelContextRv {
+impl exception::KernelContext for KernelContext {
     
 }
 
-global_asm!(include_str!("context.S"));
+global_asm!(include_str!("handler.S"));
 
-impl Context for ContextRv { 
+impl exception::Context for Context { 
     fn set_sp(&mut self, sp: usize) {
         self.x[2] = sp;
     }
@@ -61,13 +57,13 @@ impl Context for ContextRv {
     }
 }
 
-pub struct HandlerRv;
+pub struct Handler;
 
 use crate::inner::cpu::timer::Timer;
 use crate::inner::process::address_space::config::CONTEXT_ADDR;
 
-impl Handler for HandlerRv {
-    type KernelContext = KernelContextRv;
+impl exception::Handler for Handler {
+    type KernelContext = KernelContext;
 
     fn init() {
         extern "C" { fn handler(cx_addr: usize); }
@@ -82,7 +78,7 @@ impl Handler for HandlerRv {
     #[no_mangle]
     fn distribute() {
         let mut cx = unsafe {
-            core::ptr::read(CONTEXT_ADDR as *const ContextRv)
+            core::ptr::read(CONTEXT_ADDR as *const Context)
         };
 
         let scause = scause::read();
@@ -96,7 +92,7 @@ impl Handler for HandlerRv {
             },
             Trap::Interrupt(Interrupt::SupervisorTimer) => {
                 println!("time");
-                crate::inner::arch_ins::cpu::timer::TimerRv::set_next_trigger();
+                crate::inner::arch_ins::cpu::timer::Timer::set_next_trigger();
             }
             // Trap::Exception(Exception::UserEnvCall) => {
                 // cx.inc_epc(4);
@@ -111,8 +107,8 @@ impl Handler for HandlerRv {
     }
     
     #[no_mangle]
-    fn get_kernel_context() -> KernelContextRv {
-        KernelContextRv {
+    fn get_kernel_context() -> KernelContext {
+        KernelContext {
             satp: 0,
             sp: 0
         }

@@ -1,11 +1,11 @@
-pub trait HandlerTrait {
+pub trait Timer {
     fn now() -> usize;
 
     fn set_next_trigger();
 }
 
 pub fn init() {
-    Handler::set_next_trigger();
+    TimerIns::set_next_trigger();
 }
 
-pub use super::super::arch_ins::cpu::timer::*;
+pub use crate::inner::arch_ins::cpu::timer::TimerRv as TimerIns;

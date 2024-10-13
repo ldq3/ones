@@ -2,6 +2,7 @@ pub mod cpu;
 mod memory;
 mod process;
 mod arch;
+pub mod syscall;
 
 pub use arch::riscv64 as arch_ins; // architecture instance
 

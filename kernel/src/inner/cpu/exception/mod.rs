@@ -1,4 +1,3 @@
-pub mod syscall;
 pub mod sync_exception;
 pub mod async_exception;
 
@@ -35,10 +34,16 @@ pub trait Context {
     fn syscall_id(&self) -> usize;
 }
 
-pub trait HandlerTrait<T: Context> {
+pub trait KernelContext {
+    
+}
+
+pub trait Handler {
+    type KernelContext: KernelContext;
+
     fn init();
     fn distribute();
-    fn get_kernel_context();
+    fn get_kernel_context() -> Self::KernelContext;
 }
 
 pub use crate::inner::arch_ins::cpu::exception::*;

@@ -7,9 +7,9 @@ const TICKS_PER_SEC: usize = 100;
 use riscv::register::time;
 use crate::inner::cpu::timer;
 
-pub struct Handler{}
+pub struct TimerRv{}
 
-impl timer::HandlerTrait for Handler {
+impl timer::Timer for TimerRv {
     fn now() -> usize {
         time::read()
     }

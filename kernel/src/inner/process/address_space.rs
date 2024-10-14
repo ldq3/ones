@@ -6,7 +6,7 @@ pub mod config {
 use alloc::vec::Vec;
 
 use crate::inner::memory::{
-    page::table::PageTable,
+    page::Table,
     segment::Segment
 };
 

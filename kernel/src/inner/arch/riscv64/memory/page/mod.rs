@@ -1,62 +1,47 @@
-const FRAME_SIZE: usize = 4096; // 4 KiB
-const PAGE_SIZE: usize = FRAME_SIZE;
-use super::MEMORY_END;
-const PAGE_SIZE_BITS: usize = 12;
-const VA_WIDTH_SV39: usize = 39;
-const VPN_WIDTH_SV39: usize = VA_WIDTH_SV39 - PAGE_SIZE_BITS;
 
-pub mod table;
+// config
+pub const ADDRESS_WIDTH: usize = 39; // SV 39
+pub const OFFSET_WIDTH: usize = 12;
+pub const LEVEL: usize = 3;
+
 pub mod frame;
 
-use alloc::vec;
-use alloc::vec::Vec;
-use riscv::addr::Page;
-
-#[derive(Clone, Copy)]
-pub struct PageNumRv39(usize);
-pub struct VirtualAddressRv39(usize);
-
-use crate::inner::memory::page::{
-    PageNum,
-    VirtualAddress
+pub use crate::inner::memory::page::{
+    Address, Number
 };
 
-impl From<usize> for PageNumRv39 {
-    fn from(value: usize) -> Self {
-        Self(value & ((1 << VPN_WIDTH_SV39) - 1))
+use crate::inner::memory::page::TableEntryFlag;
+
+use bitflags::*;
+bitflags! {
+    pub struct FlagsRv: u8 {
+        const V = 1 << 0;
+        const R = 1 << 1;
+        const W = 1 << 2;
+        const X = 1 << 3;
+        const U = 1 << 4;
+        const G = 1 << 5;
+        const A = 1 << 6;
+        const D = 1 << 7;
     }
 }
 
-impl Into<usize> for PageNumRv39 {
-    fn into(self) -> usize {
-        self.0
-    }
-}
-
-impl PageNum for PageNumRv39 {}
-
-impl From<usize> for VirtualAddressRv39 {
-    fn from(value: usize) -> Self {
-        Self(value & ((1 << VA_WIDTH_SV39) - 1))
-    }
-}
-
-impl Into<usize> for VirtualAddressRv39 {
-    fn into(self) -> usize {
-        self.0
-    }
-}
-
-impl VirtualAddress for VirtualAddressRv39 {
-    type P = PageNumRv39;
-
-    #[inline]
-    fn page_num(&self) -> Self::P {
-        PageNumRv39((self.0 / PAGE_SIZE))
+impl TableEntryFlag for FlagsRv {
+    fn bits(&self) -> u8 {
+        0
     }
 
-    #[inline]
-    fn offset(&self) -> usize {
-        self.0 & (PAGE_SIZE - 1)
+    fn from_bits(bits: u8) -> Self {
+        Self::from_bits_truncate(bits)
+    }
+
+    fn readable(&self) -> bool {
+        self.contains(FlagsRv::R)
+    }
+    fn writable(&self) -> bool {
+        self.contains(FlagsRv::W)
+    }
+    fn executable(&self) -> bool {
+        self.contains(FlagsRv::X)
     }
 }

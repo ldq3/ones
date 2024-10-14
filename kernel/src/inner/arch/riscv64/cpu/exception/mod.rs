@@ -5,7 +5,7 @@ use log::info;
 use riscv::register::{
     scause::{self, Interrupt, Exception, Trap},
     sepc,
-    sstatus::{ self, Sstatus, SPP },
+    sstatus,
     stvec::{ self, TrapMode },
     sie,
 };
@@ -15,12 +15,6 @@ pub fn enable_timer_interrupt() {
     unsafe {
         sie::set_stimer();
     }
-}
-
-pub struct Context {
-    x: [usize; 32],
-    sstatus: Sstatus,
-    sepc: usize,
 }
 
 pub struct KernelContext {
@@ -34,33 +28,11 @@ impl exception::KernelContext for KernelContext {
 
 global_asm!(include_str!("handler.S"));
 
-impl exception::Context for Context { 
-    fn set_sp(&mut self, sp: usize) {
-        self.x[2] = sp;
-    }
-
-    fn inc_epc(&mut self, n: usize) {
-        self.sepc += n;
-    }
-
-    // function support
-    fn set_ret(&mut self, ret: usize) {
-        self.x[10] = ret;
-    }
-
-    fn fn_args(&self) -> [usize; 3] {
-        [ self.x[10], self.x[11], self.x[12] ]
-    }
-
-    fn syscall_id(&self) -> usize {
-        self.x[17]
-    }
-}
-
 pub struct Handler;
 
 use crate::inner::cpu::timer::Timer;
-use crate::inner::process::address_space::config::CONTEXT_ADDR;
+use crate::inner::process::address_space::GLOBAL_DATA_PAGE_NUMBER;
+use super::context::Context;
 
 impl exception::Handler for Handler {
     type KernelContext = KernelContext;
@@ -78,7 +50,7 @@ impl exception::Handler for Handler {
     #[no_mangle]
     fn distribute() {
         let mut cx = unsafe {
-            core::ptr::read(CONTEXT_ADDR as *const Context)
+            core::ptr::read(GLOBAL_DATA_PAGE_NUMBER as *const Context)
         };
 
         let scause = scause::read();

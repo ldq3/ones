@@ -8,33 +8,6 @@ pub fn init() {
     exception::Handler::init();
     exception::enable_timer_interrupt();
 }
-    
-// fn into_user() {
-    // let mut sstatus = sstatus::read();
-    // sstatus.set_spp(SPP::User);
-
-    // let mut cx = Context {
-        // x: [0; 32],
-        // sstatus,
-        // sepc: 0, // FIXME: the sepc should be the first instruction of user app
-    // };
-
-    // cx.set_sp(0);
-
-    // Self::expt_ret(0);
-// }
-
-pub trait Context {
-    fn set_sp(&mut self, sp: usize);
-
-    fn inc_epc(&mut self, n: usize);
-
-    fn set_ret(&mut self, ret: usize);
-
-    fn fn_args(&self) -> [usize; 3];
-
-    fn syscall_id(&self) -> usize;
-}
 
 pub trait KernelContext {
     

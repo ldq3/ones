@@ -57,7 +57,7 @@ impl Address {
 #[derive(Clone, Copy)]
 pub struct Number(usize);
 
-impl From<usize> for Number {
+impl From<usize> for Number { // FIXME
     fn from(value: usize) -> Self {
         Self(value & NUMBER_MASK)
     }

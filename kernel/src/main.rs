@@ -3,12 +3,14 @@
 #![feature(alloc_error_handler)]
 #![allow(unused)] // #FIXME
 
-mod lang_items;
-mod logger;
+// core
 mod inner;
 mod outer;
-mod sync;
+mod concurrency;
 
+// assist
+mod lang_items;
+mod logger;
 extern crate alloc;
 #[macro_use]
 extern crate bitflags;

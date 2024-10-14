@@ -165,7 +165,7 @@ impl Manager {
 }
 
 use lazy_static::*;
-use crate::sync::UPSafeCell;
+use crate::concurrency::UPSafeCell;
 lazy_static! {
     static ref MANAGER: UPSafeCell<Manager> = unsafe {
         UPSafeCell::new(Manager::new())

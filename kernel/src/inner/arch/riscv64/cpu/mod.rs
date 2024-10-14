@@ -1,4 +1,5 @@
 pub mod exception;
+pub mod context;
 pub mod timer;
 
 pub fn satp_from_page_table() -> usize {

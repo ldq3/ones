@@ -1,8 +1,18 @@
-use crate::inner::arch_ins::memory::page::frame::{ ADDRESS_WIDTH, OFFSET_WIDTH };
+use crate::inner::arch_ins::memory::page::{ ADDRESS_WIDTH, FLAGS, OFFSET_WIDTH };
 
 pub const ADDRESS_MASK: usize = (1 << ADDRESS_WIDTH) - 1;
 pub const OFFSET_MASK: usize = (1 << OFFSET_WIDTH) - 1;
 pub const NUMBER_MASK: usize = (1 << (ADDRESS_WIDTH - OFFSET_WIDTH)) - 1;
+pub struct Flags {
+    pub valid: u8,
+    pub read: u8,
+    pub write: u8,
+    pub execute: u8,
+    pub user: u8,
+    pub global: u8,
+    pub accessed: u8,
+    pub dirty: u8,
+}
 
 pub mod frame;
 
@@ -70,12 +80,30 @@ use alloc::vec::Vec;
 
 use frame::Frame;
 
-pub trait TableEntryFlag {
-    fn bits(&self) -> u8;
-    fn from_bits(bits: u8) -> Self;
-    fn readable(&self) -> bool;
-    fn writable(&self) -> bool;
-    fn executable(&self) -> bool;
+use bitflags::*;
+bitflags! {
+    pub struct TableEntryFlag: u8 {
+        const V = FLAGS.valid;
+        const R = FLAGS.read;
+        const W = FLAGS.write;
+        const X = FLAGS.execute;
+        const U = FLAGS.user;
+        const G = FLAGS.global;
+        const A = FLAGS.accessed;
+        const D = FLAGS.dirty;
+    }
+}
+
+impl TableEntryFlag {
+    fn readable(&self) -> bool {
+        self.contains(TableEntryFlag::R)
+    }
+    fn writable(&self) -> bool {
+        self.contains(TableEntryFlag::W)
+    }
+    fn executable(&self) -> bool {
+        self.contains(TableEntryFlag::X)
+    }
 }
 
 #[repr(C)]
@@ -85,7 +113,7 @@ pub struct TableEntry {
 }
 
 impl TableEntry {
-    fn new<T: TableEntryFlag>(frame_num: frame::Number, flags: T) -> Self {
+    fn new(frame_num: frame::Number, flags: TableEntryFlag) -> Self {
         let frame_num_int: usize = frame_num.into();
 
         TableEntry {
@@ -99,8 +127,8 @@ impl TableEntry {
         }
     }
 
-    fn flags<T: TableEntryFlag>(&self) -> T {
-        T::from_bits(self.bits as u8)
+    fn flags(&self) -> TableEntryFlag {
+        TableEntryFlag::from_bits(self.bits as u8).unwrap()
     }
 
     fn is_valid(&self) -> bool {
@@ -117,12 +145,6 @@ impl TableEntry {
 a page table entry contains page number and flags
 
 a page table entry should be like this for hardware reason:
-```rust
-#[repr(C)]
-struct Entry {
-    bits: usize
-}
-```
 
 # Frame
 only page table can hold the ownership of frames
@@ -164,7 +186,7 @@ impl Table {
 
     }
     
-    fn insert<F: TableEntryFlag>(&mut self, page_num: Number, pte: TableEntry) -> Result<(), ()> {
+    fn insert(&mut self, page_num: Number, pte: TableEntry) -> Result<(), ()> {
         let index = index(page_num);
         let mut existed = true;
 
@@ -174,7 +196,7 @@ impl Table {
                 existed = false;
 
                 let frame = Frame::new().unwrap();
-                *pte_before = TableEntry::new(frame.number, F::from_bits(0)); //      F::from_bits(0)); // FlagsRv::V);
+                *pte_before = TableEntry::new(frame.number, TableEntryFlag::from_bits(0).unwrap()); //      F::from_bits(0)); // FlagsRv::V);
 
                 self.frames.push(frame);
             }
@@ -186,7 +208,7 @@ impl Table {
             existed = false;
 
             let frame = Frame::new().unwrap();
-            *pte_before = TableEntry::new(frame.number, F::from_bits(0)); //       F::from_bits(0)); // FlagsRv::V);
+            *pte_before = TableEntry::new(frame.number, TableEntryFlag::from_bits(0).unwrap()); //       F::from_bits(0)); // FlagsRv::V);
 
             self.frames.push(frame);
         }
@@ -241,14 +263,14 @@ impl Table {
         Ok(pte)
     }
 
-    fn get_create<F: TableEntryFlag>(&mut self, page_num: Number) -> TableEntry {
+    fn get_create(&mut self, page_num: Number) -> TableEntry {
         let index = index(page_num);
 
         let mut pte = &mut get_ptes_in_frame(self.root)[index[0]];    
         for i in 1..3 {
             if !pte.is_valid() {
                 let frame = Frame::new().unwrap();
-                *pte = TableEntry::new(frame.number, F::from_bits(0)); // FlagsRv::V);
+                *pte = TableEntry::new(frame.number, TableEntryFlag::from_bits(0).unwrap()); // FlagsRv::V);
 
                 self.frames.push(frame);
             }
@@ -258,7 +280,7 @@ impl Table {
 
         if !pte.is_valid() {
             let frame = Frame::new().unwrap();
-            *pte = TableEntry::new(frame.number, F::from_bits(0)); // FlagsRv::V);
+            *pte = TableEntry::new(frame.number, TableEntryFlag::from_bits(0).unwrap()); // FlagsRv::V);
 
             self.frames.push(frame);
         }
@@ -307,14 +329,14 @@ fn get_mut_ref(page_table: &mut Table, page_num: Number) -> Result<&mut TableEnt
     Ok(pte)
 }
 
-fn get_mut_ref_create<F: TableEntryFlag>(page_table: &mut Table, page_num: Number) -> &mut TableEntry {
+fn get_mut_ref_create(page_table: &mut Table, page_num: Number) -> &mut TableEntry {
     let index = index(page_num);
 
     let mut pte = &mut get_ptes_in_frame(page_table.root)[index[0]];    
     for i in 1..3 {
         if !pte.is_valid() {
             let frame = Frame::new().unwrap();
-            *pte = TableEntry::new(frame.number, F::from_bits(0)); // FlagsRv::V);
+            *pte = TableEntry::new(frame.number, TableEntryFlag::from_bits(0).unwrap()); // FlagsRv::V);
 
             page_table.frames.push(frame);
         }
@@ -324,7 +346,7 @@ fn get_mut_ref_create<F: TableEntryFlag>(page_table: &mut Table, page_num: Numbe
 
     if !pte.is_valid() {
         let frame = Frame::new().unwrap();
-        *pte = TableEntry::new(frame.number, F::from_bits(0)); // FlagsRv::V);
+        *pte = TableEntry::new(frame.number, TableEntryFlag::from_bits(0).unwrap()); // FlagsRv::V);
 
         page_table.frames.push(frame);
     }

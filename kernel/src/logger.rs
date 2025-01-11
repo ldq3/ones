@@ -66,3 +66,11 @@ pub fn init() {
  
     println!("init logger, max level is {}", max_level);
 }
+
+mod test{
+    use log::info;
+
+    fn log_level() {
+        info!("Hello World!");
+    }
+}

@@ -3,19 +3,17 @@
 #![feature(alloc_error_handler)]
 #![allow(unused)] // #FIXME
 
+mod runtime;
+extern crate alloc; // FIXME: 为什么这样写？
+
 // core
 mod inner;
 mod outer;
 mod concurrency;
+mod file_system;
 
 // assist
-mod lang_items;
 mod logger;
-extern crate alloc;
-#[macro_use]
-extern crate bitflags;
-
-use log::info;
 
 #[no_mangle]
 pub fn kernel_main() -> ! {
@@ -23,6 +21,5 @@ pub fn kernel_main() -> ! {
     
     inner::init();
 
-    info!("Hello World!");
     panic!("Shutdown machine!");
 }

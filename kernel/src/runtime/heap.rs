@@ -23,7 +23,6 @@ pub fn handle_alloc_error(layout: core::alloc::Layout) -> ! {
 mod tests {
     use crate::println;
     
-    #[allow(unused)]
     pub fn test_heap() {
         use alloc::boxed::Box;
         use alloc::vec::Vec;

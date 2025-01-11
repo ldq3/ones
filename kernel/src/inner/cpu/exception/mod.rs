@@ -1,12 +1,13 @@
 pub mod sync_exception;
 pub mod async_exception;
+mod arch;
 
-use crate::inner::arch_ins::cpu::exception;
+use arch::riscv64 as arch_ins;
 
 // use log::error;
 pub fn init() {
-    exception::Handler::init();
-    exception::enable_timer_interrupt();
+    arch_ins::Handler::init();
+    arch_ins::enable_timer_interrupt();
 }
 
 pub trait KernelContext {

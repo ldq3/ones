@@ -1,8 +1,6 @@
 use crate::inner::cpu::context;
 
-use riscv::register::{ 
-    sstatus::Sstatus
-};
+use riscv::register::sstatus::Sstatus;
 
 pub struct Context {
     x: [usize; 32],
@@ -10,7 +8,7 @@ pub struct Context {
     pub sepc: usize,
 }
 
-impl context::Context for Context { 
+impl context::ContextTrait for Context { 
     fn set_sp(&mut self, sp: usize) {
         self.x[2] = sp;
     }

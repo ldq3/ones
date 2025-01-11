@@ -1,4 +1,6 @@
-use crate::inner::arch_ins::memory::page::{ ADDRESS_WIDTH, FLAGS, OFFSET_WIDTH };
+mod arch;
+
+use arch::riscv64::{ ADDRESS_WIDTH, FLAGS, OFFSET_WIDTH };
 
 pub const ADDRESS_MASK: usize = (1 << ADDRESS_WIDTH) - 1;
 pub const OFFSET_MASK: usize = (1 << OFFSET_WIDTH) - 1;

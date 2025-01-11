@@ -1,4 +1,6 @@
-use crate::inner::arch_ins::memory::page::frame::{ ADDRESS_WIDTH, OFFSET_WIDTH };
+mod arch;
+
+use arch::riscv64::{ ADDRESS_WIDTH, OFFSET_WIDTH };
 
 pub const ADDRESS_MASK: usize = (1 << ADDRESS_WIDTH) - 1;
 pub const OFFSET_MASK: usize = (1 << OFFSET_WIDTH) - 1;
@@ -10,7 +12,7 @@ pub fn init() {
     }
 
     MANAGER.exclusive_access()
-    .init(Address::from(ekernel as usize).ceil_number(), Address::from(crate::inner::arch_ins::memory::MEMORY_END).number());
+    .init(Address::from(ekernel as usize).ceil_number(), Address::from(crate::inner::memory::MEMORY_END).number());
 }
 
 #[derive(Clone, Copy)]

@@ -9,7 +9,7 @@ use crate::inner::cpu::timer;
 
 pub struct Timer{}
 
-impl timer::Timer for Timer {
+impl timer::TimerTrait for Timer {
     fn now() -> usize {
         time::read()
     }

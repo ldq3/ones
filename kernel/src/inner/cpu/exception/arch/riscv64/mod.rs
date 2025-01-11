@@ -30,9 +30,13 @@ global_asm!(include_str!("handler.S"));
 
 pub struct Handler;
 
-use crate::inner::cpu::timer::Timer;
-use crate::inner::process::address_space::GLOBAL_DATA_PAGE_NUMBER;
-use super::context::Context;
+use crate::inner::{
+    cpu::{
+        timer::TimerTrait,
+        context::Context,
+    },
+    process::address_space::GLOBAL_DATA_PAGE_NUMBER,
+};
 
 impl exception::Handler for Handler {
     type KernelContext = KernelContext;
@@ -64,7 +68,8 @@ impl exception::Handler for Handler {
             },
             Trap::Interrupt(Interrupt::SupervisorTimer) => {
                 println!("time");
-                crate::inner::arch_ins::cpu::timer::Timer::set_next_trigger();
+                use crate::inner::cpu::timer::*;
+                Timer::set_next_trigger();
             }
             // Trap::Exception(Exception::UserEnvCall) => {
                 // cx.inc_epc(4);

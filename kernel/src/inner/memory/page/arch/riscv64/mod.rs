@@ -4,8 +4,6 @@ pub const ADDRESS_WIDTH: usize = 39; // SV 39
 pub const OFFSET_WIDTH: usize = 12;
 pub const LEVEL: usize = 3;
 
-pub mod frame;
-
 use crate::inner::memory::page::Flags;
 pub const FLAGS: Flags = Flags {
     valid: 1,

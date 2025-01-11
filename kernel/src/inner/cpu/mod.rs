@@ -2,22 +2,17 @@ pub mod timer;
 pub mod exception;
 pub mod context;
 
-pub fn init() {
-    exception::init();
-    timer::init();  
+mod arch;
+
+pub trait CentralProcessUnitTrait {
+    fn init() {
+        exception::init();
+
+        use timer::*;
+        Timer::init();  
+    }
+
+    fn shutdown(failure: bool) -> !;
 }
 
-// fn into_user() {
-    // let mut sstatus = sstatus::read();
-    // sstatus.set_spp(SPP::User);
-
-    // let mut cx = Context {
-        // x: [0; 32],
-        // sstatus,
-        // sepc: 0, // FIXME: the sepc should be the first instruction of user app
-    // };
-
-    // cx.set_sp(0);
-
-    // Self::expt_ret(0);
-// }
+pub use arch::riscv64::CentralProcessUnit;

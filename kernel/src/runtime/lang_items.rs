@@ -1,5 +1,9 @@
 use core::panic::PanicInfo;
-use crate::{println, inner::arch_ins::shutdown};
+use core::arch::global_asm;
+
+use crate::println;
+
+global_asm!(include_str!("arch/riscv64/entry.asm"));
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
@@ -9,5 +13,6 @@ fn panic(info: &PanicInfo) -> ! {
         println!("paniced: {}", info.message());
     }
 
-    shutdown(true)
+    use crate::inner::cpu::*;
+    CentralProcessUnit::shutdown(true)
 }

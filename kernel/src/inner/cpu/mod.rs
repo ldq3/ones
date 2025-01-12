@@ -6,7 +6,8 @@ mod arch;
 
 pub trait CentralProcessUnitTrait {
     fn init() {
-        exception::init();
+        use exception::*;
+        Handler::init();
 
         use timer::*;
         Timer::init();  

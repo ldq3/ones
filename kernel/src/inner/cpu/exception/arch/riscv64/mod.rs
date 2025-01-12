@@ -1,6 +1,5 @@
 use crate::inner::cpu::exception;
 
-use core::arch::global_asm;
 use log::info;
 use riscv::register::{
     scause::{self, Interrupt, Exception, Trap},
@@ -9,13 +8,6 @@ use riscv::register::{
     stvec::{ self, TrapMode },
     sie,
 };
-use crate::println;
-
-pub fn enable_timer_interrupt() {
-    unsafe {
-        sie::set_stimer();
-    }
-}
 
 pub struct KernelContext {
     satp: usize,
@@ -23,36 +15,41 @@ pub struct KernelContext {
 }
 
 impl exception::KernelContext for KernelContext {
-    
+    #[no_mangle]
+    fn get() -> Self {
+        KernelContext {
+            satp: 0,
+            sp: 0
+        }
+    }
 }
 
+use core::arch::global_asm;
 global_asm!(include_str!("handler.S"));
 
 pub struct Handler;
 
-use crate::inner::{
-    cpu::{
-        timer::TimerTrait,
-        context::Context,
-    },
-    process::address_space::GLOBAL_DATA_PAGE_NUMBER,
-};
-
-impl exception::Handler for Handler {
-    type KernelContext = KernelContext;
-
+impl exception::HandlerTrait for Handler {
     fn init() {
-        extern "C" { fn handler(cx_addr: usize); }
         unsafe {
+            extern "C" { fn handler(cx_addr: usize); }
             stvec::write(handler as usize, TrapMode::Direct);
             sstatus::set_sie();
+
+            // enable timer interrupt
+            sie::set_stimer();
         }
 
         info!("init trap handler")
-    }   
+    }
 
     #[no_mangle]
     fn distribute() {
+        use crate::inner::{
+            cpu::context::Context,
+            process::address_space::GLOBAL_DATA_PAGE_NUMBER,
+        };
+
         let mut cx = unsafe {
             core::ptr::read(GLOBAL_DATA_PAGE_NUMBER as *const Context)
         };
@@ -60,14 +57,14 @@ impl exception::Handler for Handler {
         let scause = scause::read();
         // let stval = stval::read(),
         let sepc = sepc::read();
-        println!("trap: cause: {:?}, epc: 0x{:#x}", scause.cause(), sepc);
+        info!("trap: cause: {:?}, epc: 0x{:#x}", scause.cause(), sepc);
 
         match scause.cause() {
             Trap::Exception(Exception::Breakpoint) => {
                 breakpoint(&mut cx.sepc);
             },
             Trap::Interrupt(Interrupt::SupervisorTimer) => {
-                println!("time");
+                info!("time");
                 use crate::inner::cpu::timer::*;
                 Timer::set_next_trigger();
             }
@@ -78,21 +75,13 @@ impl exception::Handler for Handler {
                 // );
             // },
             _ => {
-                println!("unsupported exception");
+                info!("unsupported exception");
             }
-        }
-    }
-    
-    #[no_mangle]
-    fn get_kernel_context() -> KernelContext {
-        KernelContext {
-            satp: 0,
-            sp: 0
         }
     }
 }
 
 fn breakpoint(sepc: &mut usize) {
-    println!("a breakpoint set @0x{:x}", sepc);
+    info!("a breakpoint set @0x{:x}", sepc);
     *sepc += 2;
 }

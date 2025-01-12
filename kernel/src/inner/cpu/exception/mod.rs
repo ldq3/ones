@@ -1,23 +1,15 @@
 pub mod sync_exception;
 pub mod async_exception;
+
 mod arch;
 
-use arch::riscv64 as arch_ins;
-
-// use log::error;
-pub fn init() {
-    arch_ins::Handler::init();
-    arch_ins::enable_timer_interrupt();
-}
-
 pub trait KernelContext {
-    
+    fn get() -> Self;
 }
 
-pub trait Handler {
-    type KernelContext: KernelContext;
-
+pub trait HandlerTrait {
     fn init();
     fn distribute();
-    fn get_kernel_context() -> Self::KernelContext;
 }
+
+pub use arch::riscv64::*;

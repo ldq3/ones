@@ -3,7 +3,7 @@ use core::arch::global_asm;
 
 use crate::println;
 
-global_asm!(include_str!("arch/riscv64/entry.asm"));
+global_asm!(include_str!("entry.asm"));
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
@@ -13,6 +13,6 @@ fn panic(info: &PanicInfo) -> ! {
         println!("paniced: {}", info.message());
     }
 
-    use crate::inner::cpu::*;
+    use crate::virtualization::cpu::*;
     CentralProcessUnit::shutdown(true)
 }

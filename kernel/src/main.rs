@@ -1,23 +1,23 @@
 #![no_main]
 #![no_std]
 #![feature(alloc_error_handler)]
-#![allow(unused)] // #FIXME
-
-extern crate alloc; // FIXME: 为什么这样写？
 
 mod runtime;
-mod inner;
-mod outer;
-mod concurrency;
-mod file_system;
+extern crate alloc; // FIXME: 为什么这样写？
+
+mod virtualization;
+
+mod peripheral;
 
 mod logger;
+
+mod config;
 
 #[no_mangle]
 pub fn kernel_main() -> ! {
     runtime::init();
     logger::init();
-    inner::init();
+    virtualization::init();
 
     test::main();
 
@@ -28,10 +28,14 @@ mod test {
     use super::{
         runtime,
         logger,
+        // virtualization,
     };
 
     pub fn main() {
         runtime::test::main();
         logger::test::main();
+        // inner::test::main();
     }
 }
+
+// ekernel, MEMORY_END

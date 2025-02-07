@@ -1,0 +1,1 @@
+pub const MEMORY_END: usize = 0x80_800_000;

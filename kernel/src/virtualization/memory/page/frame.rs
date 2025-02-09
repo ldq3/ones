@@ -1,7 +1,15 @@
-// config
-const ADDRESS_WIDTH: usize = 56; // SV 39
-pub const OFFSET_WIDTH: usize = 12; 
+/*!
+# SV 39
+const ADDRESS_WIDTH: usize = 56;
 
-pub const ADDRESS_MASK: usize = (1 << ADDRESS_WIDTH) - 1;
-pub const OFFSET_MASK: usize = (1 << OFFSET_WIDTH) - 1;
-pub const NUMBER_MASK: usize = (1 << (ADDRESS_WIDTH - OFFSET_WIDTH)) - 1;
+const NUMBER_WIDTH: usize = 44;
+
+const OFFSET_WIDTH: usize = 12; 
+*/
+
+// use ones::virtualization::memory::page::Address;
+
+// type Physical_Address = Address<
+//     0b11_111_111_111_111_111_111_111_111_111_111_111_111_111_111_000_000_000_000,
+//     0b000_000_000_000,
+// >;

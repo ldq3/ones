@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 pub mod timer;
 pub mod exception;
 pub mod context;

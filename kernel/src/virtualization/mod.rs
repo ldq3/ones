@@ -8,6 +8,7 @@ pub fn init() {
     use cpu::*; // #FIXME: 如何自动捆绑导入？
 
     CentralProcessUnit::init(); 
+    memory::init();
 }
 
 pub mod test {

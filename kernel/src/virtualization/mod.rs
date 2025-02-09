@@ -11,6 +11,7 @@ pub fn init() {
     memory::init();
 }
 
+#[cfg(test)]
 pub mod test {
     pub fn main() {
         use super::cpu;

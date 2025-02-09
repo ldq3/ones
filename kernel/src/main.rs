@@ -11,8 +11,6 @@ mod peripheral;
 
 mod logger;
 
-mod config;
-
 #[no_mangle]
 pub fn kernel_main() -> ! {
     runtime::init();

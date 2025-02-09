@@ -1,4 +1,4 @@
-mod frame;
+pub mod page;
 
 mod config {
     pub const ADDRESS_MASK: usize = (1 << ADDRESS_WIDTH) - 1;
@@ -9,4 +9,5 @@ mod config {
     pub const OFFSET_WIDTH: usize = 12;
     pub const LEVEL: usize = 3;
 
+    pub const MEMORY_END: usize = 0x80_800_000;
 }

@@ -27,7 +27,7 @@ pub fn satp_from_page_table() -> usize {
 
 use crate::virtualization::cpu;
 
-pub struct CentralProcessUnit {}
+pub struct CentralProcessUnit;
 
 impl cpu::CentralProcessUnitTrait for CentralProcessUnit {
     fn shutdown(failure: bool) -> ! {

@@ -10,7 +10,6 @@
     .globl handler
     .globl load_context
     .align 2
-
 handler:
     csrrw sp, sscratch, sp # now sp->*TrapContext in user space, sscratch->user stack
 _save_context:

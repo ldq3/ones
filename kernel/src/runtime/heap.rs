@@ -19,7 +19,7 @@ pub fn init() {
 static mut HEAP_SPACE: [u8; config::KERNEL_HEAP_SIZE] = [0; config::KERNEL_HEAP_SIZE];
 
 mod config {
-    pub const KERNEL_HEAP_SIZE: usize = 0x800_000;
+    pub const KERNEL_HEAP_SIZE: usize = 0x80_000;
 }
 
 pub mod test {

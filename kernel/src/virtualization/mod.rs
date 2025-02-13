@@ -5,9 +5,9 @@ pub mod syscall;
 mod memory;
 
 pub fn init() {
-    use cpu::*; // #FIXME: 如何自动捆绑导入？
+    // use cpu::*; // #FIXME: 如何自动捆绑导入？
 
-    CentralProcessUnit::init(); 
+    // CentralProcessUnit::init(); 
     memory::init();
 }
 

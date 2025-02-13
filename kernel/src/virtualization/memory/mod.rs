@@ -15,15 +15,15 @@ satp 寄存器的组成：
 | PPN  | 12-63| 物理页号（Physical Page Number），指向顶级页表的物理地址           |
 */
 
+use log::info;
+use ones::virtualization::memory::page::AddressTrait;
+
 mod page;
 
 pub fn init() {
     use ones::virtualization::memory::{ KernelAddressSpace, page::Map };
 
-    page::init();
-
-    use crate::virtualization::memory::page;
-    let mut page_table = page::Table::new().unwrap();
+    use crate::virtualization::memory::page::{ self, frame::PhysicalAddress };
 
     #[allow(unused)]
     extern "C" {
@@ -39,23 +39,43 @@ pub fn init() {
         fn strampoline();
     }
 
+    let start = PhysicalAddress::ceil_number(ekernel as usize);
+    let length = PhysicalAddress::number(config::END) - start;
+
+    page::init(start, length);
+    info!("Frame manager is initialized at: {:x}, length: {:x}", start, length);
+
+    let mut page_table = page::LocalTable::new();
+
+    let text = (PhysicalAddress::number(stext as usize), PhysicalAddress::number(etext as usize));
+    let read_only_data = (PhysicalAddress::number(srodata as usize), PhysicalAddress::number(erodata as usize));
+    let data = (PhysicalAddress::number(sdata as usize), PhysicalAddress::number(edata as usize));
+    let static_data = (PhysicalAddress::number(sbss_with_stack as usize), PhysicalAddress::number(ebss as usize));
+    let trap_code = PhysicalAddress::number(strampoline as usize);
+
+    info!("Segement text: {:x} - {:x}", text.0, text.1);
+    info!("Segement read only data: {:x} - {:x}", read_only_data.0, read_only_data.1);
+    info!("Segement data: {:x} - {:x}", data.0, data.1);
+    info!("Segement static data: {:x} - {:x}", static_data.0, static_data.1);
+
     let space = KernelAddressSpace::new(
-        (stext as usize, etext as usize),
-        (srodata as usize, erodata as usize),
-        (sdata as usize, edata as usize),
-        (sbss_with_stack as usize, ebss as usize),
-        (ekernel as usize , ekernel as usize),
-        (strampoline as usize, strampoline as usize)
+        text,
+        read_only_data,
+        data,
+        static_data,
+        trap_code
     );
 
     for (segment, map) in space.into_iter() {
-        if let Map::Identical = map {
-            for page_num in segment.range.0..segment.range.1 {
-                page_table.identical_map(page_num, segment.flag).unwrap();
+        if let Map::Fixed(frame_num) = map {
+            let page_num = segment.range.0;
+
+            for i in 0..(segment.range.1 - segment.range.0) {
+                page_table.fixed_map(page_num + i, frame_num + i, segment.flag);
             }
         } else {
             for page_num in segment.range.0..segment.range.1 {
-                page_table.insert(page_num, segment.flag).unwrap();
+                page_table.insert(page_num, segment.flag);
             }
         }
     }
@@ -69,5 +89,5 @@ pub fn init() {
 }
 
 mod config {
-    pub const END: usize = 0x80_800_000;
+    pub const END: usize = 0x88_000_000;
 }

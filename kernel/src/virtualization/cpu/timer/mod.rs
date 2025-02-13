@@ -19,7 +19,7 @@ const TICKS_PER_SEC: usize = 100;
 use riscv::register::time;
 use crate::virtualization::cpu::timer;
 
-pub struct Timer{}
+pub struct Timer;
 
 impl timer::TimerTrait for Timer {
     fn now() -> usize {

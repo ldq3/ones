@@ -20,14 +20,6 @@ pub fn print(args: fmt::Arguments) {
     Stdout.write_fmt(args).unwrap();
 }
 
-// add escape sequence of color to string
-// #[macro_export]
-// macro_rules! color {
-//     ($args: ident, $color_code: ident) => {
-//         format_args!("\u{1B}[{}m{}\u{1B}[0m", $color_code as u8, $args)
-//     };
-// }
-
 #[macro_export]
 macro_rules! print {
     ($fmt: literal $(, $($arg: tt)+)?) => {

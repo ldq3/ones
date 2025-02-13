@@ -15,24 +15,19 @@ const RSW_WIDTH: usize = 2;
 const FLAG_WIDTH: usize = 8;
 */
 
-mod frame;
+pub mod frame;
 
-pub fn init() {
-    use ones::virtualization::memory::page::frame as lib_frame;
-    use crate::virtualization::memory;
+use ones::virtualization::memory::page::{ Table, TableEntry, Address };
 
-    lib_frame::init(memory::config::END, memory::config::END).unwrap();
-}
+pub use ones::virtualization::memory::page::frame::init;
 
-use ones::virtualization::memory::page::{ RootTable, TableEntry, Address };
-
-pub type Table = RootTable<
+pub type LocalTable = Table<
     3,
-    LocalEntry,
+    LocalTableEntry,
     VirtualAddress,
 >;
 
-type LocalEntry = TableEntry<
+type LocalTableEntry = TableEntry<
     0b111_111_111_111_111_111_111_111_111_111_111_111_111_111_110_000_000_000,
     0b11_111_111_111,
 >;
@@ -41,3 +36,9 @@ type VirtualAddress = Address<
     0b111_111_111_111_111_111_111_111_111_000_000_000_000,
     0b000_000_000_000,
 >;
+
+use lazy_static::*;
+use spin::Mutex;
+lazy_static!{
+    pub static ref KERNEL_PAGE_TABLE: Mutex<LocalTable> = Mutex::new(LocalTable::new());
+}

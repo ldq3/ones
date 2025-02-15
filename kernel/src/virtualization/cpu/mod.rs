@@ -4,7 +4,7 @@ pub mod timer;
 pub mod exception;
 pub mod context;
 
-pub trait CentralProcessUnitTrait {
+pub trait CentralProcessUnit {
     fn init() {
         use exception::*;
         Handler::init();
@@ -23,13 +23,9 @@ pub mod test {
     }
 }
 
-pub fn satp_from_page_table() -> usize {
-    8usize << 60 // | self.root_ppn.0
-}
+pub struct Handler;
 
-pub struct CentralProcessUnit;
-
-impl CentralProcessUnitTrait for CentralProcessUnit {
+impl CentralProcessUnit for Handler {
     fn shutdown(failure: bool) -> ! {
         #[allow(deprecated)]
         use sbi_rt::{ system_reset, NoReason, Shutdown, SystemFailure };

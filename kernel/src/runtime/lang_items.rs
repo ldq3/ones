@@ -14,5 +14,5 @@ fn panic(info: &PanicInfo) -> ! {
     }
 
     use crate::virtualization::cpu::*;
-    CentralProcessUnit::shutdown(true)
+    Handler::shutdown(true)
 }

@@ -6,7 +6,7 @@
     ld x\n, \n*8(sp)
 .endm
 
-    .section .text.trampoline
+    .section .text.ttest
     .globl handler
     .globl load_context
     .align 2

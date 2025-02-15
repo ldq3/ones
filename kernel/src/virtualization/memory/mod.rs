@@ -23,20 +23,25 @@ mod page;
 pub fn init() {
     use ones::virtualization::memory::{ KernelAddressSpace, page::Map };
 
-    use crate::virtualization::memory::page::{ self, frame::PhysicalAddress };
+    use crate::virtualization::memory::page::{ self, frame::PhysicalAddress, KERNEL_PAGE_TABLE };
 
     #[allow(unused)]
     extern "C" {
         fn stext();
         fn etext();
+
+        fn ttest();
+
         fn srodata();
         fn erodata();
+
         fn sdata();
         fn edata();
-        fn sbss_with_stack();
+
+        fn kernel_stack();
+        // sbss
         fn ebss();
         fn ekernel();
-        fn strampoline();
     }
 
     let start = PhysicalAddress::ceil_number(ekernel as usize);
@@ -45,15 +50,16 @@ pub fn init() {
     page::init(start, length);
     info!("Frame manager is initialized at: {:x}, length: {:x}", start, length);
 
-    let mut page_table = page::LocalTable::new();
+    let mut page_table = KERNEL_PAGE_TABLE.lock();
 
     let text = (PhysicalAddress::number(stext as usize), PhysicalAddress::number(etext as usize));
+    let trap_text = PhysicalAddress::number(ttest as usize);
     let read_only_data = (PhysicalAddress::number(srodata as usize), PhysicalAddress::number(erodata as usize));
     let data = (PhysicalAddress::number(sdata as usize), PhysicalAddress::number(edata as usize));
-    let static_data = (PhysicalAddress::number(sbss_with_stack as usize), PhysicalAddress::number(ebss as usize));
-    let trap_code = PhysicalAddress::number(strampoline as usize);
+    let static_data = (PhysicalAddress::number(kernel_stack as usize), PhysicalAddress::number(ebss as usize));
 
     info!("Segement text: {:x} - {:x}", text.0, text.1);
+    info!("Segement trap text: {:x}", trap_text);
     info!("Segement read only data: {:x} - {:x}", read_only_data.0, read_only_data.1);
     info!("Segement data: {:x} - {:x}", data.0, data.1);
     info!("Segement static data: {:x} - {:x}", static_data.0, static_data.1);
@@ -63,27 +69,36 @@ pub fn init() {
         read_only_data,
         data,
         static_data,
-        trap_code
+        trap_text
     );
 
     for (segment, map) in space.into_iter() {
         if let Map::Fixed(frame_num) = map {
             let page_num = segment.range.0;
 
-            for i in 0..(segment.range.1 - segment.range.0) {
+            for i in 0..(segment.range.1 - segment.range.0 + 1) {
                 page_table.fixed_map(page_num + i, frame_num + i, segment.flag);
             }
         } else {
-            for page_num in segment.range.0..segment.range.1 {
+            for page_num in segment.range.0..(segment.range.1 + 1) {
                 page_table.insert(page_num, segment.flag);
             }
+        }
+    }
+
+    // test kernel page table
+    {
+        if let Ok((frame_num, _)) = page_table.get(text.1) {
+            assert_eq!(frame_num, text.1)
+        } else {
+            panic!("Text segement map error.")
         }
     }
 
     use riscv::register::satp;
     use core::arch::asm;
     unsafe {
-        satp::write(page_table.root.1.number); // 8usize << 60 | self.root_ppn.0
+        satp::write(1usize << 63 | page_table.root.1.number);
         asm!("sfence.vma");
     }
 }

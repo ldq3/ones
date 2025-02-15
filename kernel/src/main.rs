@@ -2,11 +2,10 @@
 #![no_std]
 #![feature(alloc_error_handler)]
 
+extern crate alloc;
+
 mod runtime;
-extern crate alloc; // FIXME: 为什么这样写？
-
 mod virtualization;
-
 mod peripheral;
 
 mod logger;
@@ -35,5 +34,3 @@ mod test {
         // inner::test::main();
     }
 }
-
-// ekernel, MEMORY_END

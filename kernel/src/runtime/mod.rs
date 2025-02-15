@@ -15,7 +15,8 @@ fn clear_bss() {
 pub fn init() {
     clear_bss();
 
-    heap::init();
+    use heap::Heap;
+    heap::Handler::init();
 }
 
 mod config {

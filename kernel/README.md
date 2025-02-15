@@ -12,5 +12,8 @@
 
 `src/virtualization/cpu/exception/handler.S`
 
+符号 sbss 的位置不可更改 
+bss.stack 节的位置也不能动
+
 符号：
 - 程序入口：_start

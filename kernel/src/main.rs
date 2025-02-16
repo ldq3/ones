@@ -12,25 +12,11 @@ mod logger;
 
 #[no_mangle]
 pub fn kernel_main() -> ! {
-    runtime::init();
+    use runtime::Runtime;
+    runtime::Handler::init();
+
     logger::init();
     virtualization::init();
 
-    test::main();
-
     panic!("Shutdown machine!");
-}
-
-mod test {
-    use super::{
-        runtime,
-        logger,
-        // virtualization,
-    };
-
-    pub fn main() {
-        runtime::test::main();
-        logger::test::main();
-        // inner::test::main();
-    }
 }

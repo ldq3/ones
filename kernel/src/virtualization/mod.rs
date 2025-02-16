@@ -1,3 +1,5 @@
+use cpu::Handler;
+
 pub mod cpu;
 // pub mod memory;
 pub mod process;
@@ -5,10 +7,11 @@ pub mod syscall;
 mod memory;
 
 pub fn init() {
-    // use cpu::*; // #FIXME: 如何自动捆绑导入？
+    use memory::Memory;
+    memory::Handler::init();
 
-    // CentralProcessUnit::init(); 
-    memory::init();
+    // use cpu::CentralProcessUnit;
+    // Handler::init();
 }
 
 #[cfg(test)]

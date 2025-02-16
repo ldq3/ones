@@ -27,8 +27,9 @@ mod config {
     pub const KERNEL_HEAP_SIZE: usize = 0x1_000_000;
 }
 
-pub mod test {
-    use crate::println;
+#[cfg(test)]
+mod test {
+    use log::info;
     
     pub fn main() {
         use alloc::boxed::Box;
@@ -52,6 +53,6 @@ pub mod test {
         }
         assert!(bss_range.contains(&(v.as_ptr() as usize)));
         drop(v);
-        println!("heap_test passed!");
+        info!("Heap test passed!");
     }
 }

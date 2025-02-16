@@ -1,26 +1,17 @@
-#![allow(unused)]
-
 pub mod timer;
 pub mod exception;
 pub mod context;
 
 pub trait CentralProcessUnit {
     fn init() {
-        use exception::*;
-        Handler::init();
+        use exception::Exception;
+        exception::Handler::init();
 
-        use timer::*;
-        Timer::init();  
+        use timer::Timer;
+        timer::Handler::init();  
     }
 
     fn shutdown(failure: bool) -> !;
-}
-
-pub mod test {
-    pub fn main() {
-        use super::exception;
-        exception::test::main();
-    }
 }
 
 pub struct Handler;
@@ -37,5 +28,13 @@ impl CentralProcessUnit for Handler {
         }
 
         unreachable!() 
+    }
+}
+
+#[cfg(test)]
+mod test {
+    pub fn main() {
+        use super::exception;
+        exception::test::main();
     }
 }

@@ -1,56 +1,80 @@
+/*!
+内核态产生中断时，将上下文压栈
+
+用户态产生中断时，将上下文保存在某页中
+
+Rust 会在函数的开始和结尾加入一些额外的指令，控制栈寄存器等
+
+指令相对寻址与虚拟内存
+
+问题：
+- 修改 epc
+
+sscratch 寄存器：user stack 和 user context
+
+# 指令
+`sfence.vma`：清除 TLB 缓存
+
+# TODO
+Trap::Interrupt(SupervisorExternal) => {
+    crate::board::irq_handler();
+}
+
+Trap::Exception(Exception::UserEnvCall) => {
+    cx.inc_epc(4);
+    cx.set_ret(
+        trap::syscall::syscall(cx.syscall_id(), cx.fn_args()) as usize
+    );
+},
+*/
+
 use log::info;
-use riscv::register::{
-    scause::{self, Interrupt, Exception, Trap},
-    sepc,
-    sstatus,
-    stvec::{ self, TrapMode },
-    sie,
-};
 
-pub struct KernelContext {
-    satp: usize,
-    sp: usize
-}
-
-impl KernelContextTrait for KernelContext {
-    #[no_mangle]
-    fn get() -> Self {
-        KernelContext {
-            satp: 0,
-            sp: 0
-        }
-    }
-}
+use riscv::register::{self, sscratch};
 
 use core::arch::global_asm;
 global_asm!(include_str!("handler.S"));
 
+use crate::virtualization::cpu::context::Context;
+
+pub trait Exception {
+    fn init();
+
+    #[allow(unused)]
+    fn distribute_in_user();
+
+    #[allow(unused)]
+    fn distribute_in_kernel(context: &mut Context);
+}
+
 pub struct Handler;
 
-impl HandlerTrait for Handler {
+use register::{ scause::{ self, Trap, Exception::*, Interrupt::* }, stval, sepc };
+impl Exception for Handler {
     fn init() {
-        unsafe {
-            extern "C" { fn handler(cx_addr: usize); }
-            stvec::write(handler as usize, TrapMode::Direct);
-            sstatus::set_sie();
-
-            // enable timer interrupt
-            sie::set_stimer();
+        use register::{ stvec::{ self, TrapMode }, sstatus, sie };
+        
+        use ones::virtualization::memory::config::TRAP_TEXT;
+        extern "C" {
+            fn user_handler();
+            fn kernel_handler();
         }
+        let kernel_handler = kernel_handler as usize - user_handler as usize + TRAP_TEXT; // the virtual address of kernel exception handler
+        unsafe {
+            stvec::write(kernel_handler, TrapMode::Direct); 
+            sscratch::write(Self::distribute_in_kernel as usize);
 
-        info!("init trap handler")
+            sstatus::set_sie(); // enable interrupt
+
+            // sie::set_stimer(); // enable timer interrupt
+        }
+        
+        info!("Testing exception handler.");
+        test::main();
     }
 
-    #[no_mangle]
-    fn distribute() {
-        use crate::virtualization::{
-            cpu::context::Context,
-            process::address_space::GLOBAL_DATA_PAGE_NUMBER,
-        };
-
-        let mut cx = unsafe {
-            core::ptr::read(GLOBAL_DATA_PAGE_NUMBER as *const Context)
-        };
+    fn distribute_in_user() {
+        let mut context = Context::new();
 
         let scause = scause::read();
         // let stval = stval::read(),
@@ -58,39 +82,48 @@ impl HandlerTrait for Handler {
         info!("trap: cause: {:?}, epc: 0x{:#x}", scause.cause(), sepc);
 
         match scause.cause() {
-            Trap::Exception(Exception::Breakpoint) => {
-                info!("a breakpoint set @0x{:x}", cx.sepc);
-                cx.sepc += 2;
+            Trap::Exception(Breakpoint) => {
+                info!("a breakpoint set @0x{:x}", context.sepc);
+                context.sepc += 2;
             },
-            Trap::Interrupt(Interrupt::SupervisorTimer) => {
-                info!("time");
-                use crate::virtualization::cpu::timer::*;
-                Timer::set_next_trigger();
+            Trap::Interrupt(SupervisorTimer) => {
+                use crate::virtualization::cpu::timer::{ self, Timer };
+                timer::Handler::set_next_trigger();
             }
-            // Trap::Exception(Exception::UserEnvCall) => {
-                // cx.inc_epc(4);
-                // cx.set_ret(
-                    // trap::syscall::syscall(cx.syscall_id(), cx.fn_args()) as usize
-                // );
-            // },
             _ => {
                 info!("unsupported exception");
             }
         }
     }
+
+    fn distribute_in_kernel(context: &mut Context) {
+        info!("Distribute in kernel.");
+
+        let scause = scause::read();
+        let stval = stval::read();
+        match scause.cause() {
+            Trap::Interrupt(SupervisorTimer) => {
+                use crate::virtualization::cpu::timer::{ self, Timer };
+                timer::Handler::set_next_trigger();
+                timer::Handler::check();
+                info!("Timer.");
+            },
+            Trap::Exception(Breakpoint) => {
+                info!("a breakpoint set @0x{:x}", context.sepc);
+                context.sepc += 2;
+            },
+            _ => {
+                panic!(
+                    "Unsupported trap from kernel: {:?}, stval = {:#x}!",
+                    scause.cause(),
+                    stval
+                );
+            }
+        }
+    }
 }
 
-
-pub trait KernelContextTrait {
-    fn get() -> Self;
-}
-
-pub trait HandlerTrait {
-    fn init();
-    fn distribute();
-}
-
-pub mod test {
+mod test {
     pub fn main() {
         use riscv::asm::ebreak;
 

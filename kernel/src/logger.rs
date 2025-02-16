@@ -49,7 +49,7 @@ impl log::Log for Logger {
     }
 }
 
-static LOGGER: Logger = Logger {};
+static LOGGER: Logger = Logger;
 
 pub fn init() {
     log::set_logger(&LOGGER).unwrap();
@@ -67,10 +67,3 @@ pub fn init() {
     println!("init logger, max level is {}", max_level);
 }
 
-pub mod test{
-    use log::info;
-
-    pub fn main() {
-        info!("Hello World!");
-    }
-}

@@ -20,86 +20,94 @@ use ones::virtualization::memory::page::AddressTrait;
 
 mod page;
 
-pub fn init() {
-    use ones::virtualization::memory::{ KernelAddressSpace, page::Map };
+pub trait Memory {
+    fn init();
+}
 
-    use crate::virtualization::memory::page::{ self, frame::PhysicalAddress, KERNEL_PAGE_TABLE };
+pub struct Handler;
 
-    #[allow(unused)]
-    extern "C" {
-        fn stext();
-        fn etext();
+impl Memory for Handler {
+    fn init() {
+        use ones::virtualization::memory::{ KernelAddressSpace, page::Map };
 
-        fn ttest();
+        use crate::virtualization::memory::page::{ self, frame::PhysicalAddress, KERNEL_PAGE_TABLE };
 
-        fn srodata();
-        fn erodata();
+        #[allow(unused)]
+        extern "C" {
+            fn stext();
+            fn etext();
 
-        fn sdata();
-        fn edata();
+            fn ttest();
 
-        fn kernel_stack();
-        // sbss
-        fn ebss();
-        fn ekernel();
-    }
+            fn srodata();
+            fn erodata();
 
-    let start = PhysicalAddress::ceil_number(ekernel as usize);
-    let length = PhysicalAddress::number(config::END) - start;
+            fn sdata();
+            fn edata();
 
-    page::init(start, length);
-    info!("Frame manager is initialized at: {:x}, length: {:x}", start, length);
+            fn kernel_stack();
+            // sbss
+            fn ebss();
+            fn ekernel();
+        }
 
-    let mut page_table = KERNEL_PAGE_TABLE.lock();
+        let start = PhysicalAddress::ceil_number(ekernel as usize);
+        let length = PhysicalAddress::number(config::END) - start;
 
-    let text = (PhysicalAddress::number(stext as usize), PhysicalAddress::number(etext as usize));
-    let trap_text = PhysicalAddress::number(ttest as usize);
-    let read_only_data = (PhysicalAddress::number(srodata as usize), PhysicalAddress::number(erodata as usize));
-    let data = (PhysicalAddress::number(sdata as usize), PhysicalAddress::number(edata as usize));
-    let static_data = (PhysicalAddress::number(kernel_stack as usize), PhysicalAddress::number(ebss as usize));
+        page::init(start, length);
+        info!("Frame manager is initialized at: {:x}, length: {:x}", start, length);
 
-    info!("Segement text: {:x} - {:x}", text.0, text.1);
-    info!("Segement trap text: {:x}", trap_text);
-    info!("Segement read only data: {:x} - {:x}", read_only_data.0, read_only_data.1);
-    info!("Segement data: {:x} - {:x}", data.0, data.1);
-    info!("Segement static data: {:x} - {:x}", static_data.0, static_data.1);
+        let mut page_table = KERNEL_PAGE_TABLE.lock();
 
-    let space = KernelAddressSpace::new(
-        text,
-        read_only_data,
-        data,
-        static_data,
-        trap_text
-    );
+        let text = (PhysicalAddress::number(stext as usize), PhysicalAddress::number(etext as usize));
+        let trap_text = PhysicalAddress::number(ttest as usize);
+        let read_only_data = (PhysicalAddress::number(srodata as usize), PhysicalAddress::number(erodata as usize));
+        let data = (PhysicalAddress::number(sdata as usize), PhysicalAddress::number(edata as usize));
+        let static_data = (PhysicalAddress::number(kernel_stack as usize), PhysicalAddress::number(ebss as usize));
 
-    for (segment, map) in space.into_iter() {
-        if let Map::Fixed(frame_num) = map {
-            let page_num = segment.range.0;
+        info!("Segement text: {:x} - {:x}", text.0, text.1);
+        info!("Segement trap text: {:x}", trap_text);
+        info!("Segement read only data: {:x} - {:x}", read_only_data.0, read_only_data.1);
+        info!("Segement data: {:x} - {:x}", data.0, data.1);
+        info!("Segement static data: {:x} - {:x}", static_data.0, static_data.1);
 
-            for i in 0..(segment.range.1 - segment.range.0 + 1) {
-                page_table.fixed_map(page_num + i, frame_num + i, segment.flag);
-            }
-        } else {
-            for page_num in segment.range.0..(segment.range.1 + 1) {
-                page_table.insert(page_num, segment.flag);
+        let space = KernelAddressSpace::new(
+            text,
+            read_only_data,
+            data,
+            static_data,
+            trap_text
+        );
+
+        for (segment, map) in space.into_iter() {
+            if let Map::Fixed(frame_num) = map {
+                let page_num = segment.range.0;
+
+                for i in 0..(segment.range.1 - segment.range.0 + 1) {
+                    page_table.fixed_map(page_num + i, frame_num + i, segment.flag);
+                }
+            } else {
+                for page_num in segment.range.0..(segment.range.1 + 1) {
+                    page_table.insert(page_num, segment.flag);
+                }
             }
         }
-    }
 
-    // test kernel page table
-    {
-        if let Ok((frame_num, _)) = page_table.get(text.1) {
-            assert_eq!(frame_num, text.1)
-        } else {
-            panic!("Text segement map error.")
+        // test kernel page table
+        {
+            if let Ok((frame_num, _)) = page_table.get(text.1) {
+                assert_eq!(frame_num, text.1)
+            } else {
+                panic!("Text segement map error.")
+            }
         }
-    }
 
-    use riscv::register::satp;
-    use core::arch::asm;
-    unsafe {
-        satp::write(1usize << 63 | page_table.root.1.number);
-        asm!("sfence.vma");
+        use riscv::register::satp;
+        use core::arch::asm;
+        unsafe {
+            satp::write(1usize << 63 | page_table.root.1.number);
+            asm!("sfence.vma");
+        }
     }
 }
 

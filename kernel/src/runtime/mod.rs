@@ -1,6 +1,21 @@
 pub mod lang_items;
 pub mod heap;
 
+pub trait Runtime {
+    fn init();
+}
+
+pub struct Handler;
+
+impl Runtime for Handler {
+    fn init() {
+        clear_bss();
+
+        use heap::Heap;
+        heap::Handler::init();
+    }
+}
+
 fn clear_bss() {
     extern "C" {
         fn sbss();
@@ -11,22 +26,10 @@ fn clear_bss() {
     });
 }
 
-
-pub fn init() {
-    clear_bss();
-
-    use heap::Heap;
-    heap::Handler::init();
-}
-
 mod config {
     
 }
 
-pub mod test {
-    use super::heap;
+mod test {
 
-    pub fn main() {
-        heap::test::main();
-    }
 }

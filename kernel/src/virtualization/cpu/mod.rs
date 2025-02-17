@@ -1,15 +1,5 @@
-pub mod timer;
-pub mod exception;
-pub mod context;
-
 pub trait CentralProcessUnit {
-    fn init() {
-        use exception::Exception;
-        exception::Handler::init();
-
-        use timer::Timer;
-        timer::Handler::init();  
-    }
+    fn init() {}
 
     fn shutdown(failure: bool) -> !;
 }
@@ -28,12 +18,5 @@ impl CentralProcessUnit for Handler {
         }
 
         unreachable!() 
-    }
-}
-
-#[cfg(test)]
-mod test {
-    pub fn main() {
-        
     }
 }

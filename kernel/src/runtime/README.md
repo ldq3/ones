@@ -1,1 +1,0 @@
-file entry.asm under every architecture subfolder is needed. 初始化栈

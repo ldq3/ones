@@ -1,9 +1,6 @@
 use core::panic::PanicInfo;
-use core::arch::global_asm;
 
 use crate::println;
-
-global_asm!(include_str!("entry.asm"));
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
@@ -13,6 +10,6 @@ fn panic(info: &PanicInfo) -> ! {
         println!("paniced: {}", info.message());
     }
 
-    use crate::virtualization::cpu::*;
-    Handler::shutdown(true)
+    use crate::virtualization::cpu::{ self, CentralProcessUnit };
+    cpu::Handler::shutdown(true)
 }

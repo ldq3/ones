@@ -1,4 +1,8 @@
 /*!
+为什么不能用 call
+
+符号 `<<` 的优先级
+
 内核态产生中断时，将上下文压栈
 
 用户态产生中断时，将上下文保存在某页中
@@ -27,6 +31,7 @@ Trap::Exception(Exception::UserEnvCall) => {
     );
 },
 */
+mod context;
 
 use log::info;
 
@@ -36,7 +41,7 @@ use riscv::register::{self, sscratch};
 use core::arch::global_asm;
 global_asm!(include_str!("handler.S"));
 
-use crate::virtualization::cpu::context::Context;
+use context::Context;
 
 pub trait Exception {
     fn init();
@@ -53,7 +58,7 @@ pub struct Handler;
 use register::{ scause::{ self, Trap, Exception::*, Interrupt::* }, stval, sepc };
 impl Exception for Handler {
     fn init() {
-        use register::{ stvec::{ self, TrapMode }, sstatus, sie };
+        use register::{ stvec::{ self, TrapMode }, sstatus }; // sie
         
         use ones::virtualization::memory::config::TRAP_TEXT;
         extern "C" {
@@ -97,7 +102,7 @@ impl Exception for Handler {
                 context.sepc += 2;
             },
             Trap::Interrupt(SupervisorTimer) => {
-                use crate::virtualization::cpu::timer::{ self, Timer };
+                use crate::peripheral::timer::{ self, Timer };
                 timer::Handler::set_next_trigger();
             }
             _ => {
@@ -113,7 +118,7 @@ impl Exception for Handler {
         let stval = stval::read();
         match scause.cause() {
             Trap::Interrupt(SupervisorTimer) => {
-                use crate::virtualization::cpu::timer::{ self, Timer };
+                use crate::peripheral::timer::{ self, Timer };
                 timer::Handler::set_next_trigger();
                 timer::Handler::check();
                 info!("Timer.");

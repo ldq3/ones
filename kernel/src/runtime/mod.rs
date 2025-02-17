@@ -1,5 +1,12 @@
+/*!
+file entry.asm under every architecture subfolder is needed. 初始化栈
+*/
+
 pub mod lang_items;
-pub mod heap;
+pub mod memory;
+
+use core::arch::global_asm;
+global_asm!(include_str!("entry.asm"));
 
 pub trait Runtime {
     fn init();
@@ -8,22 +15,11 @@ pub trait Runtime {
 pub struct Handler;
 
 impl Runtime for Handler {
+    #[inline]
     fn init() {
-        clear_bss();
-
-        use heap::Heap;
-        heap::Handler::init();
+        use memory::Memory;
+        memory::Handler::init();
     }
-}
-
-fn clear_bss() {
-    extern "C" {
-        fn sbss();
-        fn ebss();
-    }
-    (sbss as usize..ebss as usize).for_each(|a| {
-        unsafe { (a as *mut u8).write_volatile(0) }
-    });
 }
 
 mod config {

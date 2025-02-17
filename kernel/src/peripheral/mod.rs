@@ -1,4 +1,18 @@
 pub mod console;
+pub mod timer;
+
+pub trait Peripheral {
+    fn init();
+}
+
+pub struct Handler;
+
+impl Peripheral for Handler {
+    fn init() {
+        use timer::Timer;
+        timer::Handler::init();
+    }
+}
 
 // mod config {
 //     pub const MMIO: &[(usize, usize)] = &[

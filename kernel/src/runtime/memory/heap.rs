@@ -10,6 +10,8 @@ impl Heap for Handler {
         unsafe {
             HEAP_ALLOCATOR.lock().init(HEAP_SPACE.as_ptr() as usize, config::KERNEL_HEAP_SIZE);
         }
+
+        test::main();
     }
 }
 
@@ -27,7 +29,6 @@ mod config {
     pub const KERNEL_HEAP_SIZE: usize = 0x1_000_000;
 }
 
-#[cfg(test)]
 mod test {
     use log::info;
     

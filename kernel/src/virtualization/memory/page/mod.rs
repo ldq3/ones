@@ -32,7 +32,7 @@ type LocalTableEntry = TableEntry<
     0b11_111_111_111,
 >;
 
-type VirtualAddress = Address<
+pub type VirtualAddress = Address<
     0b111_111_111_111_111_111_111_111_111_000_000_000_000,
     0b000_000_000_000,
 >;

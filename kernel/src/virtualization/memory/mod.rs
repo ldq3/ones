@@ -1,4 +1,6 @@
 /*！
+ttext 节的位置不能动
+
 # SV 39
 RV 64
 
@@ -18,7 +20,7 @@ satp 寄存器的组成：
 use log::info;
 use ones::virtualization::memory::page::AddressTrait;
 
-mod page;
+pub mod page;
 
 pub trait Memory {
     fn init();
@@ -35,9 +37,8 @@ impl Memory for Handler {
         #[allow(unused)]
         extern "C" {
             fn stext();
+            fn ttext();
             fn etext();
-
-            fn ttest();
 
             fn srodata();
             fn erodata();
@@ -51,7 +52,7 @@ impl Memory for Handler {
             fn ekernel();
         }
 
-        let start = PhysicalAddress::ceil_number(ekernel as usize);
+        let start = PhysicalAddress::number(ekernel as usize);
         let length = PhysicalAddress::number(config::END) - start;
 
         page::init(start, length);
@@ -60,7 +61,7 @@ impl Memory for Handler {
         let mut page_table = KERNEL_PAGE_TABLE.lock();
 
         let text = (PhysicalAddress::number(stext as usize), PhysicalAddress::number(etext as usize));
-        let trap_text = PhysicalAddress::number(ttest as usize);
+        let trap_text = PhysicalAddress::number(ttext as usize);
         let read_only_data = (PhysicalAddress::number(srodata as usize), PhysicalAddress::number(erodata as usize));
         let data = (PhysicalAddress::number(sdata as usize), PhysicalAddress::number(edata as usize));
         let static_data = (PhysicalAddress::number(kernel_stack as usize), PhysicalAddress::number(ebss as usize));
@@ -95,15 +96,18 @@ impl Memory for Handler {
 
         // test kernel page table
         {
-            if let Ok((frame_num, _)) = page_table.get(text.1) {
-                assert_eq!(frame_num, text.1)
+            use ones::virtualization::memory::config::TRAP_TEXT;
+            if let Ok((frame_num, _)) = page_table.get(TRAP_TEXT) {
+                assert_eq!(frame_num, trap_text);
+                info!("Segement trap text is mapped successfully, VA: {:x}, PA: {:x}", TRAP_TEXT, frame_num);
             } else {
-                panic!("Text segement map error.")
+                panic!("Text segement map error.");
             }
         }
 
         use riscv::register::satp;
         use core::arch::asm;
+        info!("Kernel page table: {:x}", page_table.root.1.number);
         unsafe {
             satp::write(1usize << 63 | page_table.root.1.number);
             asm!("sfence.vma");

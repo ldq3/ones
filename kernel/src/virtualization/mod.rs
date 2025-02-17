@@ -10,8 +10,8 @@ pub fn init() {
     use memory::Memory;
     memory::Handler::init();
 
-    // use cpu::CentralProcessUnit;
-    // Handler::init();
+    use cpu::CentralProcessUnit;
+    Handler::init();
 }
 
 #[cfg(test)]

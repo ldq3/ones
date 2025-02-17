@@ -11,11 +11,11 @@ SECTIONS
         stext = .;
         *(.text.entry)
         . = ALIGN(4K);
+        ttext = .;
+        *(.text.ttext)
+        . = ALIGN(4K);
         *(.text .text.*)
         etext = .;
-        . = ALIGN(4K);
-        ttest = .;
-        *(.text.ttest);
     }
 
     . = ALIGN(4K);

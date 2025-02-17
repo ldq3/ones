@@ -6,7 +6,7 @@
     ld x\n, \n*8(sp)
 .endm
 
-    .section .text.ttest
+    .section .text.ttext
     .globl user_handler
     .globl load_user_context
     .globl kernel_handler

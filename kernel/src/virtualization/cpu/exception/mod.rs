@@ -30,6 +30,7 @@ Trap::Exception(Exception::UserEnvCall) => {
 
 use log::info;
 
+use ones::virtualization::memory::page::AddressTrait;
 use riscv::register::{self, sscratch};
 
 use core::arch::global_asm;
@@ -59,7 +60,14 @@ impl Exception for Handler {
             fn user_handler();
             fn kernel_handler();
         }
-        let kernel_handler = kernel_handler as usize - user_handler as usize + TRAP_TEXT; // the virtual address of kernel exception handler
+
+        info!("Physical address of kernel_handler: {:x}", kernel_handler as usize);
+
+        use crate::virtualization::memory::page::VirtualAddress;
+        let kernel_handler = kernel_handler as usize - user_handler as usize + VirtualAddress::address_of_number(TRAP_TEXT); // the virtual address of kernel exception handler
+
+        info!("Virtual address of kernel_handler: {:x}", kernel_handler);
+
         unsafe {
             stvec::write(kernel_handler, TrapMode::Direct); 
             sscratch::write(Self::distribute_in_kernel as usize);
@@ -69,7 +77,9 @@ impl Exception for Handler {
             // sie::set_stimer(); // enable timer interrupt
         }
         
-        info!("Testing exception handler.");
+        info!("distribute_in_kernel: {:x}", Self::distribute_in_kernel as usize);
+
+        // info!("Testing exception handler.");
         test::main();
     }
 

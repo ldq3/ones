@@ -34,7 +34,6 @@ impl CentralProcessUnit for Handler {
 #[cfg(test)]
 mod test {
     pub fn main() {
-        use super::exception;
-        exception::test::main();
+        
     }
 }

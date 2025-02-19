@@ -1,5 +1,6 @@
 pub mod cpu;
 pub mod memory;
+mod process;
 
 pub trait Virtualization {
     fn init();

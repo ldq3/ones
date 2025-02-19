@@ -31,7 +31,8 @@ Trap::Exception(Exception::UserEnvCall) => {
     );
 },
 */
-mod context;
+pub mod context;
+mod syscall;
 
 use log::info;
 
@@ -138,10 +139,47 @@ impl Exception for Handler {
     }
 }
 
+/**
+for user process
+*/
+pub struct Stack {
+    pid: usize,
+    top: usize,
+    bottom: usize,
+}
+
+use ones::virtualization::memory::{ Flag, config::TRAP_TEXT };
+use crate::virtualization::memory::page::KERNEL_PAGE_TABLE;
+impl Stack {
+    pub fn new(pid: usize) -> Self {
+        let top = TRAP_TEXT - pid;
+        let bottom = top - config::STACK_SIZE;
+
+        let mut kernel_page_table = KERNEL_PAGE_TABLE.lock();
+        
+        for page_num in bottom..(top + 1) {
+            kernel_page_table.insert(
+                page_num,
+                Flag::R | Flag::W,
+            );
+        }
+        
+        Stack {
+            pid,
+            top,
+            bottom,
+        }
+    }
+}
+
 mod test {
     pub fn main() {
         use riscv::asm::ebreak;
 
         unsafe { ebreak(); }
     }
+}
+
+mod config {
+    pub const STACK_SIZE: usize = 0x1_000;
 }

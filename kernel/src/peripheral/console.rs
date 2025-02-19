@@ -22,6 +22,7 @@ impl Write for Stdout {
             #[allow(deprecated)]
             sbi_rt::legacy::console_putchar(c as usize);
         }
+        
         Ok(())
     }
 }

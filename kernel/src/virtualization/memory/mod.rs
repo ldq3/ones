@@ -30,7 +30,7 @@ pub struct Handler;
 
 impl Memory for Handler {
     fn init() {
-        use ones::virtualization::memory::{ KernelAddressSpace, page::Map };
+        use ones::{ runtime::KernelAddressSpace, virtualization::memory::page::Map };
 
         use crate::virtualization::memory::page::{ self, frame::PhysicalAddress, KERNEL_PAGE_TABLE };
 

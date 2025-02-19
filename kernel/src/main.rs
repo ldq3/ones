@@ -40,7 +40,6 @@ mod runtime;
 mod virtualization;
 mod exception;
 mod peripheral;
-mod syscall;
 
 mod logger;
 

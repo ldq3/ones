@@ -10,6 +10,8 @@ fn panic(info: &PanicInfo) -> ! {
         println!("paniced: {}", info.message());
     }
 
-    use crate::virtualization::cpu::{ self, CentralProcessUnit };
+    use ones::virtualization::cpu::CentralProcessUnit;
+    use crate::virtualization::cpu;
+
     cpu::Handler::shutdown(true)
 }

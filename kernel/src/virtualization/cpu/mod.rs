@@ -1,12 +1,12 @@
-pub trait CentralProcessUnit {
-    fn init() {}
-
-    fn shutdown(failure: bool) -> !;
-}
+use ones::virtualization::cpu::CentralProcessUnit;
 
 pub struct Handler;
 
 impl CentralProcessUnit for Handler {
+    fn init() {
+        
+    }
+
     fn shutdown(failure: bool) -> ! {
         #[allow(deprecated)]
         use sbi_rt::{ system_reset, NoReason, Shutdown, SystemFailure };

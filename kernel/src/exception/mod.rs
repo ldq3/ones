@@ -36,7 +36,7 @@ mod syscall;
 
 use log::info;
 
-use ones::virtualization::memory::page::AddressTrait;
+use ones::virtualization::memory::page::Address as _;
 use riscv::register::{self, sscratch};
 
 use core::arch::global_asm;
@@ -142,35 +142,9 @@ impl Exception for Handler {
 /**
 for user process
 */
-pub struct Stack {
-    pid: usize,
-    top: usize,
-    bottom: usize,
-}
-
-use ones::virtualization::memory::{ Flag, config::TRAP_TEXT };
-use crate::virtualization::memory::page::KERNEL_PAGE_TABLE;
-impl Stack {
-    pub fn new(pid: usize) -> Self {
-        let top = TRAP_TEXT - pid;
-        let bottom = top - config::STACK_SIZE;
-
-        let mut kernel_page_table = KERNEL_PAGE_TABLE.lock();
-        
-        for page_num in bottom..(top + 1) {
-            kernel_page_table.insert(
-                page_num,
-                Flag::R | Flag::W,
-            );
-        }
-        
-        Stack {
-            pid,
-            top,
-            bottom,
-        }
-    }
-}
+use ones::exception::ModelStack;
+use crate::virtualization::memory;
+pub type _Stack = ModelStack<memory::Handler>;
 
 mod test {
     pub fn main() {
@@ -178,8 +152,4 @@ mod test {
 
         unsafe { ebreak(); }
     }
-}
-
-mod config {
-    pub const STACK_SIZE: usize = 0x1_000;
 }

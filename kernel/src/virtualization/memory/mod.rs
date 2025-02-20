@@ -18,21 +18,17 @@ satp 寄存器的组成：
 */
 
 use log::info;
-use ones::virtualization::memory::page::AddressTrait;
+use ones::virtualization::memory::{ page::{Address as _, Table}, Memory };
 
 pub mod page;
-
-pub trait Memory {
-    fn init();
-}
 
 pub struct Handler;
 
 impl Memory for Handler {
     fn init() {
-        use ones::{ runtime::KernelAddressSpace, virtualization::memory::page::Map };
+        use ones::runtime::KernelAddressSpace;
 
-        use crate::virtualization::memory::page::{ self, frame::PhysicalAddress, KERNEL_PAGE_TABLE };
+        use crate::virtualization::memory::page::frame::PhysicalAddress;
 
         #[allow(unused)]
         extern "C" {
@@ -55,10 +51,9 @@ impl Memory for Handler {
         let start = PhysicalAddress::number(ekernel as usize);
         let length = PhysicalAddress::number(config::END) - start;
 
-        page::init(start, length);
+        use ones::virtualization::memory::page::frame;
+        frame::init(start, length);
         info!("Frame manager is initialized at: {:x}, length: {:x}", start, length);
-
-        let mut page_table = KERNEL_PAGE_TABLE.lock();
 
         let text = (PhysicalAddress::number(stext as usize), PhysicalAddress::number(etext as usize));
         let trap_text = PhysicalAddress::number(ttext as usize);
@@ -80,37 +75,62 @@ impl Memory for Handler {
             trap_text
         );
 
-        for (segment, map) in space.into_iter() {
-            if let Map::Fixed(frame_num) = map {
-                let page_num = segment.range.0;
+        Self::init_page(space);
 
-                for i in 0..(segment.range.1 - segment.range.0 + 1) {
-                    page_table.fixed_map(page_num + i, frame_num + i, segment.flag);
-                }
-            } else {
-                for page_num in segment.range.0..(segment.range.1 + 1) {
-                    page_table.insert(page_num, segment.flag);
-                }
-            }
-        }
+        Self::enable_page();
+    }
 
-        // test kernel page table
-        {
-            use ones::virtualization::memory::config::TRAP_TEXT;
-            if let Ok((frame_num, _)) = page_table.get(TRAP_TEXT) {
-                assert_eq!(frame_num, trap_text);
-                info!("Segement trap text is mapped successfully, VA: {:x}, PA: {:x}", TRAP_TEXT, frame_num);
-            } else {
-                panic!("Text segement map error.");
-            }
-        }
-
+    #[inline]
+    fn enable_page() {
         use riscv::register::satp;
         use core::arch::asm;
-        info!("Kernel page table: {:x}", page_table.root.1.number);
+
         unsafe {
-            satp::write(1usize << 63 | page_table.root.1.number);
+            satp::write(1usize << 63 | page::KERNEL_TABLE.lock().root.1.number);
             asm!("sfence.vma");
+        }
+    }
+
+    #[inline]
+    fn page_to_frame(page_num: usize) -> usize {
+        let mut kernel_page_table = page::KERNEL_TABLE.lock();
+
+        let (frame_num, _) = kernel_page_table.get(page_num).unwrap();
+
+        frame_num
+    }
+    
+    #[inline]
+    fn map(page_num: usize, flag: ones::virtualization::memory::Flag) {
+        let mut kernel_page_table = page::KERNEL_TABLE.lock();
+
+        kernel_page_table.insert(page_num, flag);
+    }
+
+    #[inline]
+    fn fixed_map(page_num: usize, frame_num: usize, flag: ones::virtualization::memory::Flag) {
+        let mut kernel_page_table = page::KERNEL_TABLE.lock();
+
+        kernel_page_table.fixed_map(page_num, frame_num, flag);
+    }
+}
+
+#[allow(unused)]
+mod test {
+    use log::info;
+
+    pub fn kernel_page_table(trap_text: usize) {
+        use ones::virtualization::memory::page::Table as _;
+        use crate::virtualization::memory::page::KERNEL_TABLE;
+
+        let mut page_table = KERNEL_TABLE.lock();
+
+        use ones::virtualization::memory::config::TRAP_TEXT;
+        if let Ok((frame_num, _)) = page_table.get(TRAP_TEXT) {
+            assert_eq!(frame_num, trap_text);
+            info!("Segement trap text is mapped successfully, VA: {:x}, PA: {:x}", TRAP_TEXT, frame_num);
+        } else {
+            panic!("Text segement map error.");
         }
     }
 }

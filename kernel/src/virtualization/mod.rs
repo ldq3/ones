@@ -10,10 +10,10 @@ pub struct Handler;
 
 impl Virtualization for Handler {
     fn init() {
-        use memory::Memory;
+        use ones::virtualization::{ memory::Memory, cpu::CentralProcessUnit };
+        
         memory::Handler::init();
 
-        use cpu::CentralProcessUnit;
         cpu::Handler::init();
     }
 }

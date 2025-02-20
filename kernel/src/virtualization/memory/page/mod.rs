@@ -17,28 +17,27 @@ const FLAG_WIDTH: usize = 8;
 
 pub mod frame;
 
-use ones::virtualization::memory::page::{ Table, TableEntry, Address };
+use ones::virtualization::memory::page::{ ModelTable, ModelTableEntry, ModelAddress };
 
-pub use ones::virtualization::memory::page::frame::init;
-
-pub type LocalTable = Table<
+pub type Table = ModelTable<
     3,
-    LocalTableEntry,
+    TableEntry,
     VirtualAddress,
 >;
 
-type LocalTableEntry = TableEntry<
+type TableEntry = ModelTableEntry<
     0b111_111_111_111_111_111_111_111_111_111_111_111_111_111_110_000_000_000,
     0b11_111_111_111,
 >;
 
-pub type VirtualAddress = Address<
+pub type VirtualAddress = ModelAddress<
     0b111_111_111_111_111_111_111_111_111_000_000_000_000,
     0b000_000_000_000,
 >;
 
-use lazy_static::*;
+use ones::virtualization::memory::page::Table as _;
+use lazy_static::lazy_static;
 use spin::Mutex;
 lazy_static!{
-    pub static ref KERNEL_PAGE_TABLE: Mutex<LocalTable> = Mutex::new(LocalTable::new());
+    pub static ref KERNEL_TABLE: Mutex<Table> = Mutex::new(Table::new());
 }

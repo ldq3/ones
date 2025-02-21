@@ -31,8 +31,8 @@ Trap::Exception(Exception::UserEnvCall) => {
     );
 },
 */
-pub mod context;
-mod syscall;
+mod system_call;
+mod context;
 
 use log::info;
 
@@ -42,22 +42,11 @@ use riscv::register::{self, sscratch};
 use core::arch::global_asm;
 global_asm!(include_str!("handler.S"));
 
-use context::Context;
-
-pub trait Exception {
-    fn init();
-
-    #[allow(unused)]
-    fn distribute_in_user();
-
-    #[allow(unused)]
-    fn distribute_in_kernel(context: &mut Context);
-}
-
 pub struct Handler;
 
-use register::{ scause::{ self, Trap, Exception::*, Interrupt::* }, stval, sepc };
-impl Exception for Handler {
+use ones::exception::{ Exception, Cause };
+use crate::exception::context::Context;
+impl Exception<Context> for Handler {
     fn init() {
         use register::{ stvec::{ self, TrapMode }, sstatus }; // sie
         
@@ -76,66 +65,25 @@ impl Exception for Handler {
 
         unsafe {
             stvec::write(kernel_handler, TrapMode::Direct); 
-            sscratch::write(Self::distribute_in_kernel as usize);
+            sscratch::write(Self::distribute_in_kernel::<system_call::Handler> as usize);
 
             sstatus::set_sie(); // enable interrupt
 
             // sie::set_stimer(); // enable timer interrupt
         }
         
-        info!("distribute_in_kernel: {:x}", Self::distribute_in_kernel as usize);
+        info!("distribute_in_kernel: {:x}", Self::distribute_in_kernel::<system_call::Handler> as usize);
 
         // info!("Testing exception handler.");
         test::main();
     }
 
-    fn distribute_in_user() {
-        let mut context = Context::new();
-
-        let scause = scause::read();
-        // let stval = stval::read(),
-        let sepc = sepc::read();
-        info!("trap: cause: {:?}, epc: 0x{:#x}", scause.cause(), sepc);
-
-        match scause.cause() {
-            Trap::Exception(Breakpoint) => {
-                info!("a breakpoint set @0x{:x}", context.sepc);
-                context.sepc += 2;
-            },
-            Trap::Interrupt(SupervisorTimer) => {
-                use crate::peripheral::timer::{ self, Timer };
-                timer::Handler::set_next_trigger();
-            }
-            _ => {
-                info!("unsupported exception");
-            }
-        }
+    fn cause() -> Cause {
+        Cause::Breakpoint
     }
 
-    fn distribute_in_kernel(context: &mut Context) {
-        info!("Distribute in kernel.");
-
-        let scause = scause::read();
-        let stval = stval::read();
-        match scause.cause() {
-            Trap::Interrupt(SupervisorTimer) => {
-                use crate::peripheral::timer::{ self, Timer };
-                timer::Handler::set_next_trigger();
-                timer::Handler::check();
-                info!("Timer.");
-            },
-            Trap::Exception(Breakpoint) => {
-                info!("a breakpoint set @0x{:x}", context.sepc);
-                context.sepc += 2;
-            },
-            _ => {
-                panic!(
-                    "Unsupported trap from kernel: {:?}, stval = {:#x}!",
-                    scause.cause(),
-                    stval
-                );
-            }
-        }
+    fn value() {
+        
     }
 }
 

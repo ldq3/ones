@@ -1,4 +1,8 @@
-// use crate::{ print, println };
+use ones::exception::system_call::SystemCall;
+
+pub struct Handler;
+
+impl SystemCall for Handler {}
 
 // pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
 //     match syscall_id {

@@ -53,7 +53,7 @@ pub fn kernel_main() -> ! {
     use virtualization::Virtualization;
     virtualization::Handler::init();
 
-    use exception::Exception;
+    use ones::exception::Exception;
     exception::Handler::init();
 
     use peripheral::Peripheral;

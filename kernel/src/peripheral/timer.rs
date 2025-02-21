@@ -7,7 +7,7 @@ pub trait Timer {
 
     fn set_next_trigger();
 
-    fn check();
+    // fn check();
 }
 
 // pub static mut TICKS: usize = 0;
@@ -23,10 +23,6 @@ impl Timer for Handler {
     fn set_next_trigger() {
         let next_trigger = Self::now() + config::FREQ / config::TICKS_PER_SEC;
         sbi_rt::set_timer(next_trigger as _);
-    }
-
-    fn check() {
-        
     }
 }
 

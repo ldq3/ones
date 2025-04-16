@@ -1,0 +1,19 @@
+[package]
+name = "ones"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
+bitflags = "1.2.1"
+log = "0.4"
+
+spin = "0.7.0"
+
+xmas-elf = "0.7.0"
+
+volatile = "0.3"
+
+[dev-dependencies]
+clap = "2.33.3"
+rand = "0.8.0"

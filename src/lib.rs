@@ -7,6 +7,7 @@ pub mod intervene;
 pub mod concurrency;
 pub mod peripheral;
 pub mod file_system;
+pub mod system_call;
 
 extern crate alloc;
 

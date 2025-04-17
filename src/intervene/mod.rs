@@ -30,6 +30,10 @@ pub trait Lib<C: UserContext + 'static>: Dependence<C> {
     new process: 直接将 process 加入调度器，go to trap_return
     */
     fn init();
+    /**
+    service routine
+    */
+    fn service_user();
 
     fn return_to_user() -> !;
 }
@@ -66,10 +70,6 @@ pub trait Dependence<C: UserContext> {
     set service routine.
     */
     fn service_set(address: usize);
-    /**
-    service routine
-    */
-    fn service_user();
     
     #[inline]
     fn dist_user(user_context: &mut C, cause: Cause, _value: usize) {

@@ -15,10 +15,10 @@
 
 pub mod context;
 
-use crate::memory::Address;
+use crate::{cpu::DataReg, memory::Address};
 use crate::runtime::address_space::config::INTERVENE_TEXT;
 
-pub trait Lib<C: UserContext + 'static>: Dependence<C> {
+pub trait Lib<DG: DataReg + 'static>: Dependence<DG> {
     /**
     set kernel trap entry
     alltraps_k
@@ -38,7 +38,7 @@ pub trait Lib<C: UserContext + 'static>: Dependence<C> {
     fn return_to_user() -> !;
 }
 
-pub trait Dependence<C: UserContext> {
+pub trait Dependence<DG: DataReg> {
     /**Get Exception cause.
     
     PlatformDependent
@@ -72,17 +72,18 @@ pub trait Dependence<C: UserContext> {
     fn service_set(address: usize);
     
     #[inline]
-    fn dist_user(user_context: &mut C, cause: Cause, _value: usize) {
+    fn dist_user(intervene_data: &mut Data<DG>, cause: Cause, _value: usize) {
         use Cause::*;
 
         match cause {
             EnvCall => {
-                user_context.pc_add(4);
+                intervene_data.pc +=4;
+                let data_reg = &mut intervene_data.data_reg;
 
                 // enable_supervisor_interrupt();
 
-                let result = Self::syscall(user_context.iid(), user_context.iarg());
-                user_context.iret_set(result as usize); // cx is changed during sys_exec, so we have to call it again
+                let result = Self::syscall(data_reg.iid(), data_reg.iarg());
+                data_reg.iret_set(result as usize); // cx is changed during sys_exec, so we have to call it again
             },
             _ => { panic!("Unsupported trap!"); }
         }
@@ -90,7 +91,7 @@ pub trait Dependence<C: UserContext> {
     /**
     service routine
     */
-    fn service_kernel(context: &mut C) {
+    fn service_kernel(intervene_data: &mut Data<DG>) {
         use Cause::*;
         let cause = Self::cause();
         let _value = Self::value();
@@ -103,17 +104,18 @@ pub trait Dependence<C: UserContext> {
             //     info!("Timer.");
             // },
             Breakpoint => {
-                context.pc_add(2);
+                intervene_data.pc += 2;
             }
             EnvCall => {
-                context.pc_add(4);
+                intervene_data.pc +=4;
 
                 // enable_supervisor_interrupt();
+                let data_reg = &mut intervene_data.data_reg;
 
-                let result = Self::syscall(context.iid(), context.iarg());
+                let result = Self::syscall(data_reg.iid(), data_reg.iarg());
                 
                 // cx is changed during sys_exec, so we have to call it again
-                context.iret_set(result as usize);
+                data_reg.iret_set(result as usize);
             }
             External => {
                 Self::external();
@@ -141,16 +143,19 @@ pub trait Dependence<C: UserContext> {
     }
 }
 
-use context::{ KernelInfo, UserContext };
+use context::KernelInfo;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
-pub struct Data<C: UserContext> {
-    pub user_context: C,
+pub struct Data<DG: DataReg> {
+    pub data_reg: DG,
+    pub status: usize,
+    pub pc: usize,
+
     pub kernel_info: KernelInfo,
 }
 
-impl<C: UserContext> Data<C> {
+impl<DG: DataReg> Data<DG> {
     #[inline]
     pub fn get_mut(frame_number: usize) -> &'static mut Self {
         use crate::memory::Address;

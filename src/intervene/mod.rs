@@ -13,10 +13,14 @@
 - intervene text
 */
 
-pub mod context;
+pub mod data;
 
-use crate::{cpu::DataReg, memory::Address};
-use crate::runtime::address_space::config::INTERVENE_TEXT;
+use crate::{
+    cpu::DataReg,
+    memory::Address,
+    runtime::address_space::config::INTERVENE_TEXT
+};
+use data::Data;
 
 pub trait Lib<DG: DataReg + 'static>: Dependence<DG> {
     /**
@@ -140,27 +144,6 @@ pub trait Dependence<DG: DataReg> {
 
     fn load_page(_number: usize) {
         todo!()
-    }
-}
-
-use context::KernelInfo;
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct Data<DG: DataReg> {
-    pub data_reg: DG,
-    pub status: usize,
-    pub pc: usize,
-
-    pub kernel_info: KernelInfo,
-}
-
-impl<DG: DataReg> Data<DG> {
-    #[inline]
-    pub fn get_mut(frame_number: usize) -> &'static mut Self {
-        use crate::memory::Address;
-        let address = Address::address(frame_number);
-        unsafe{ &mut *(address as *mut Self) }
     }
 }
 

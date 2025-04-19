@@ -1,5 +1,7 @@
 pub mod thread;
 
+use thread::context::Context;
+
 use alloc::vec::Vec;
 use thread::Thread;
 
@@ -14,6 +16,7 @@ new_pid()
 */
 pub trait Process: Dependence {
     fn new(elf_data: &[u8]) -> Self;
+    fn id(&self) -> usize;
     /**
     # 返回值
     thread id
@@ -30,6 +33,9 @@ pub trait Process: Dependence {
     }
 
     fn fork(&mut self) -> Self;
+
+    fn get_context_mut(&mut self, tid: usize) -> &mut Context;
+    fn get_context_ref(&self, tid: usize) -> &Context;
 }
 
 pub trait Dependence {

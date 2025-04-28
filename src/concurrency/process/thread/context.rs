@@ -11,11 +11,6 @@ pub struct Context {
 
 impl Context {
     #[inline]
-    pub fn new(sp: usize, ra: usize) -> Self {
-        Self { pc: ra, sp, s: [0; 12] }
-    }
-
-    #[inline]
     pub fn empty() -> Self {
         Self {
             pc: 0,

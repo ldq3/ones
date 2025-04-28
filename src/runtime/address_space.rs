@@ -73,6 +73,9 @@ pub trait AddressSpace {
     fn intervene_data(tid: usize) -> (usize, Flag) {
         (config::INTERVENE_TEXT - 1 - tid, Flag::W | Flag::R)
     }
+    /**
+    线程的用户栈
+    */
     fn stack(&self, tid: usize) -> (usize, usize, Flag);
     fn new_intervene(&mut self, tid: usize) -> usize;
     /**
@@ -106,7 +109,8 @@ impl<T: page::Table> ModelAddressSpace<T> {
         let mut stack_base = 0;
 
         let ph_count = elf.header.pt2.ph_count();
-        let mut page_table = T::new();
+        let mut page_table = T::new();  
+
         let mut segement = Vec::new();
         for i in 0..ph_count {
             let program_header = elf.program_header(i).unwrap();
@@ -135,9 +139,9 @@ impl<T: page::Table> ModelAddressSpace<T> {
 
                 stack_base = range.1;
             }
-        }
+        } 
 
-        unsafe { page_table.fixed_map(config::INTERVENE_TEXT, itext, Flag::X | Flag::R);}
+        unsafe { page_table.fixed_map(config::INTERVENE_TEXT, itext, Flag::X | Flag::R) };
     
         Self {
             entry,

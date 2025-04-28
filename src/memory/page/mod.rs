@@ -102,7 +102,7 @@ pub trait Table: Dependence {
         }
     }
 
-    unsafe fn fixed_map(&mut self, page_num: usize, frame_num: usize, page_flag: Flag) {
+    unsafe fn fixed_map(&mut self, page_num: usize, frame_num: usize, page_flag: Flag) { 
         let index = Self::index(page_num);
         let root = self.root_table();
 
@@ -111,14 +111,13 @@ pub trait Table: Dependence {
             let frame = Frame::new();
             *current_entry = Self::new_entry(frame.number, Flag::V);
             self.frame(frame);
-
             Self::table(*current_entry)
-        } else {
+        } else { 
             Self::table(*current_entry)
         };
 
         for i in 1..(Self::conf() - 1) {
-            current_entry = &mut current_table[index[i]];
+            current_entry = &mut current_table[index[i]]; 
             current_table = if !Self::flag(*current_entry).is_valid() {
                 let frame = Frame::new();
                 *current_entry = Self::new_entry(frame.number, Flag::V);

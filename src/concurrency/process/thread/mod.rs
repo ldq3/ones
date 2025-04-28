@@ -13,11 +13,12 @@
 pub mod context;
 
 use context::Context;
+
 pub trait Thread {
     /**
     Thread id allocator is holded by 
     */
-    fn new(pid: usize, tid: usize, sp: usize, ra: usize) -> Self;
+    fn new(pid: usize, tid: usize) -> Self;
     fn empty() -> Self;
     /**
     thread clone
@@ -32,5 +33,18 @@ pub struct ModelThread {
     pub pid: usize,
     pub tid: usize,
 
-    pub kernel_context: Context,
+    pub context: Context,
+}
+
+impl ModelThread {
+    #[inline]
+    pub fn new(pid: usize, tid: usize) -> Self {
+        let context = Context::empty();
+        
+        ModelThread {
+            pid,
+            tid,
+            context,
+        }
+    }
 }

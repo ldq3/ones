@@ -51,9 +51,11 @@ pub trait Mod<S: Scheduler + 'static>: Dependence<S> {
             f(scheduler)
         } else { panic!("The scheduler is not initialized."); }
     }
+
+    fn switch(current: usize, next: usize);
 }
 
-pub trait Dependence<S: Scheduler> {
+pub trait Dependence<S: Scheduler + 'static> {
     fn open_file(name: &str, flag: Flag) -> Option<File>;
     fn get_ref() -> &'static Mutex<Option<S>>;
 }

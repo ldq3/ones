@@ -16,13 +16,13 @@
 pub mod data;
 
 use crate::{
-    cpu::DataReg,
+    concurrency::thread::context::Context,
     memory::Address,
     runtime::address_space::config::INTERVENE_TEXT
 };
 use data::Data;
 
-pub trait Lib<DG: DataReg + 'static>: Dependence<DG> {
+pub trait Lib<C: Context + 'static>: Dependence<C> {
     /**
     set kernel trap entry
     alltraps_k
@@ -42,7 +42,7 @@ pub trait Lib<DG: DataReg + 'static>: Dependence<DG> {
     fn return_to_user() -> !;
 }
 
-pub trait Dependence<DG: DataReg> {
+pub trait Dependence<C: Context> {
     /**Get Exception cause.
     
     PlatformDependent
@@ -76,18 +76,19 @@ pub trait Dependence<DG: DataReg> {
     fn service_set(address: usize);
     
     #[inline]
-    fn dist_user(intervene_data: &mut Data<DG>, cause: Cause, _value: usize) {
+    fn dist_user(intervene_data: &mut Data<C>, cause: Cause, _value: usize) {
         use Cause::*;
 
         match cause {
             EnvCall => {
-                intervene_data.pc +=4;
-                let data_reg = &mut intervene_data.data_reg;
+                intervene_data.cx.pc_add(4);
+                let iid = intervene_data.cx.iid();
+                let iarg = intervene_data.cx.iarg();
 
                 // enable_supervisor_interrupt();
 
-                let result = Self::syscall(data_reg.iid(), data_reg.iarg());
-                data_reg.iret_set(result as usize); // cx is changed during sys_exec, so we have to call it again
+                let result = Self::syscall(iid, iarg);
+                intervene_data.cx.iret_set(result as usize); // cx is changed during sys_exec, so we have to call it again
             },
             _ => { panic!("Unsupported trap!"); }
         }
@@ -95,7 +96,7 @@ pub trait Dependence<DG: DataReg> {
     /**
     service routine
     */
-    fn service_kernel(intervene_data: &mut Data<DG>) {
+    fn service_kernel(intervene_data: &mut Data<C>) {
         use Cause::*;
         let cause = Self::cause();
         let _value = Self::value();
@@ -108,18 +109,18 @@ pub trait Dependence<DG: DataReg> {
             //     info!("Timer.");
             // },
             Breakpoint => {
-                intervene_data.pc += 2;
+                intervene_data.cx.pc_add(2);
             }
             EnvCall => {
-                intervene_data.pc +=4;
+                intervene_data.cx.pc_add(4);
 
                 // enable_supervisor_interrupt();
-                let data_reg = &mut intervene_data.data_reg;
+                let cx = &mut intervene_data.cx;
 
-                let result = Self::syscall(data_reg.iid(), data_reg.iarg());
+                let result = Self::syscall(cx.iid(), cx.iarg());
                 
                 // cx is changed during sys_exec, so we have to call it again
-                data_reg.iret_set(result as usize);
+                cx.iret_set(result as usize);
             }
             External => {
                 Self::external();

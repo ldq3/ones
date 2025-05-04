@@ -15,6 +15,8 @@ use alloc::vec::Vec;
 
 /**
 Resycled id allocater
+
+保证从小到大分配 id
 */
 #[derive(Clone)]
 pub struct Allocator {

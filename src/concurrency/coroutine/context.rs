@@ -1,9 +1,7 @@
 #[derive(Clone, Debug)]
 #[repr(C)]
 pub struct Context {
-    /// return address
     pub pc: usize,
-    /// kernel stack pointer
     pub sp: usize,
     /// saved register
     pub s: [usize; 12],

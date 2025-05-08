@@ -106,7 +106,8 @@ lazy_static! {
 
 mod config {
     /// 单位：页
-    pub const STACK_SIZE: usize = 1;
+    // pub const STACK_SIZE: usize = 1;
+
     /// 容量（capacity）
     pub const CAP: usize = 64;
 }

@@ -27,7 +27,7 @@ use crate::{
     memory::{ page, Flag },
 };
 
-pub trait AddressSpace {
+pub trait Lib {
     fn from_elf(elf: &[u8]) -> Self;
     fn clone(&self) -> Self;
     fn new_kernel() -> Self;
@@ -84,22 +84,16 @@ pub trait AddressSpace {
     fn new_stack(&mut self, tid: usize) -> usize;
 }
 
-pub struct ModelAddressSpace<T: page::Table> {
+pub struct AddressSpace {
     /// Address of program entry.
     pub entry: usize,
+    pub segement: Vec<Segment>,
     /// Page number of program end.
-    pub end: usize,
-    pub segement: Vec<(Segment, page::Map)>,
-    pub page_table: T,
+    pub stack_base: usize,
 }
 
-impl<T: page::Table> ModelAddressSpace<T> {
-    /**
-    # 输入
-    - itext: frame number
-    - idata: 
-    */
-    pub fn from_elf(elf: &[u8], itext: usize) -> Self {
+impl AddressSpace {
+    pub fn from_elf(elf: &[u8]) -> Self {
         // map program headers of elf, with U flag
         let elf = xmas_elf::ElfFile::new(elf).unwrap();
         let magic = elf.header.pt1.magic;
@@ -109,7 +103,7 @@ impl<T: page::Table> ModelAddressSpace<T> {
         let mut stack_base = 0;
 
         let ph_count = elf.header.pt2.ph_count();
-        let mut page_table = T::new();  
+        // let mut page_table = page::Table::new();  
 
         let mut segement = Vec::new();
         for i in 0..ph_count {
@@ -128,26 +122,22 @@ impl<T: page::Table> ModelAddressSpace<T> {
                 if ph_flags.is_write() { flag |= Flag::W; }
                 if ph_flags.is_execute() { flag |= Flag::X; }
 
-                segement.push((
-                    Segment { range, growth: true, flag },
-                    page::Map::Random
-                ));
+                segement.push(Segment { range, growth: true, flag });
 
-                page_table.map_area(range, flag);
+                // page_table.map_area(range, flag);
 
-                page_table.copy_data(range, &elf.input[program_header.offset() as usize..(program_header.offset() + program_header.file_size()) as usize]);
+                // page_table.copy_data(range, &elf.input[program_header.offset() as usize..(program_header.offset() + program_header.file_size()) as usize]);
 
                 stack_base = range.1;
             }
         } 
 
-        unsafe { page_table.fixed_map(config::INTERVENE_TEXT, itext, Flag::X | Flag::R) };
+        // unsafe { page_table.fixed_map(config::INTERVENE_TEXT, itext, Flag::X | Flag::R) };
     
         Self {
             entry,
-            end: stack_base,
             segement,
-            page_table,
+            stack_base,
         }
     }
 }

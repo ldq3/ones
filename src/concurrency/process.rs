@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 
 use crate::{
-    runtime::address_space::AddressSpace,
+    runtime::address_space::Lib,
     Allocator
 };
 
@@ -9,7 +9,7 @@ use crate::{
 # 已有
 new_pid()
 */
-pub trait Mod<A: AddressSpace> {
+pub trait Mod<A: Lib> {
      fn fork(&mut self) -> usize {
         let _id = ALLOCATOR.lock().alloc().unwrap();
 
@@ -29,7 +29,7 @@ pub trait Mod<A: AddressSpace> {
     }
 }
 
-pub struct Process<A: AddressSpace> {
+pub struct Process<A: Lib> {
     pub id: usize, // 如果没有该字段不方便实现 Drop
 
     pub address_space: A,
@@ -39,7 +39,7 @@ pub struct Process<A: AddressSpace> {
     pub children: Vec<usize>,
 }
 
-impl<A: AddressSpace> Process<A>  {
+impl<A: Lib> Process<A>  {
     pub fn new(pid: usize, elf_data: &[u8]) -> Self {
         let mut address_space = A::from_elf(elf_data);
         address_space.new_intervene(0);
@@ -54,7 +54,7 @@ impl<A: AddressSpace> Process<A>  {
     }
 }
 
-impl<A: AddressSpace> Drop for Process<A> {
+impl<A: Lib> Drop for Process<A> {
     #[inline]
     fn drop(&mut self) {
         ALLOCATOR.lock().dealloc(self.id);

@@ -31,11 +31,14 @@ pub enum Map {
 
 pub trait Lib: Dependence {
     /**
-    unsafe fn unmap(table: &mut Table, page_num: usize) {
+    实现参考：
+    ```
+    fn unmap(table: &mut Table, page_num: usize) {
         let entry = Self::get_mut(table, page_num);
 
-        Self::set_flag(entry, Flag::empty());
+        EntryLib::flag_set(entry, Flag::empty());
     }
+    ```
     */
     fn unmap(table: &mut Table, page_num: usize);
     /**
@@ -46,41 +49,48 @@ pub trait Lib: Dependence {
     frame_num
     page_flag
 
+    实现参考：
+    ```
     fn map(table: &mut Table, page_num: usize, page_flag: Flag) {
         let index = Self::index(page_num);
-        let root = Self::as_table(table.root());
+        let root = Self::as_table(table.root.number);
 
         let mut current_entry = &mut root[index[0]];
-        let mut current_table = if !Self::flag(*current_entry).is_valid() {
+        let mut current_table = if !EntryLib::flag(current_entry).is_valid() {
             let frame = Frame::new();
-            *current_entry = Self::new_entry(frame.number, Flag::V);
+            let frame_number = frame.number;
+            *current_entry = EntryLib::new(frame_number, Flag::V);
             table.frame.push(frame);
 
-            unsafe{ Self::table(*current_entry) }
+            Self::as_table(frame_number)
         } else {
-            unsafe{ Self::table(*current_entry) }
+            let frame_number = EntryLib::frame_number(current_entry);
+            Self::as_table(frame_number)
         };
 
         for i in 1..(Self::conf() - 1) {
             current_entry = &mut current_table[index[i]];
-            current_table = if !Self::flag(*current_entry).is_valid() {
+            current_table = if !EntryLib::flag(current_entry).is_valid() {
                 let frame = Frame::new();
-                *current_entry = Self::new_entry(frame.number, Flag::V);
+                let frame_number = frame.number;
+                *current_entry = EntryLib::new(frame_number, Flag::V);
                 table.frame.push(frame);
 
-                unsafe{ Self::table(*current_entry) }
+                Self::as_table(frame_number)
             } else {
-                unsafe{ Self::table(*current_entry) }
+                let frame_number = EntryLib::frame_number(current_entry);
+                Self::as_table(frame_number)
             }
         }
 
         current_entry = &mut current_table[index[Self::conf() - 1]];
-        if !Self::flag(*current_entry).is_valid() {
+        if !EntryLib::flag(current_entry).is_valid() {
             let frame = Frame::new();
-            *current_entry = Self::new_entry(frame.number, Flag::V | page_flag);
+            *current_entry = EntryLib::new(frame.number, Flag::V | page_flag);
             table.frame.push(frame);
         }
     }
+    ```
     */
     fn map(table: &mut Table, page_num: usize, page_flag: Flag);
 
@@ -96,42 +106,49 @@ pub trait Lib: Dependence {
         }
     }
     /**
-    unsafe fn fixed_map(table: &mut Table, page_num: usize, frame_num: usize, page_flag: Flag) { 
-        let index = Self::index(page_num);
-        let root = Self::as_table(table.root());
+    实现参考：
+    ```
+    fn fixed_map(table: &mut Table, page_num: usize, frame_num: usize, page_flag: Flag) {
+        let index = Self::index(page_num); let root = Self::as_table(table.root.number);
 
         let mut current_entry = &mut root[index[0]];
-        let mut current_table = if !Self::flag(*current_entry).is_valid() {
+        let mut current_table = if !EntryLib::flag(current_entry).is_valid() {
             let frame = Frame::new();
-            *current_entry = Self::new_entry(frame.number, Flag::V);
+            let frame_number = frame.number;
+            *current_entry = EntryLib::new(frame_number, Flag::V);
             table.frame.push(frame);
-            Self::table(*current_entry)
+            Self::as_table(frame_number)
         } else { 
-            Self::table(*current_entry)
+            let frame_number = EntryLib::frame_number(current_entry);
+            Self::as_table(frame_number)
         };
 
         for i in 1..(Self::conf() - 1) {
             current_entry = &mut current_table[index[i]]; 
-            current_table = if !Self::flag(*current_entry).is_valid() {
+            current_table = if !EntryLib::flag(current_entry).is_valid() {
                 let frame = Frame::new();
-                *current_entry = Self::new_entry(frame.number, Flag::V);
+                let frame_number = frame.number;
+                *current_entry = EntryLib::new(frame_number, Flag::V);
                 table.frame.push(frame);
 
-                Self::table(*current_entry)
+                Self::as_table(frame_number)
             } else {
-                Self::table(*current_entry)
+                let frame_number = EntryLib::frame_number(current_entry);
+
+                Self::as_table(frame_number)
             }
         }
 
         current_entry = &mut current_table[index[Self::conf() - 1]];
-        *current_entry = Self::new_entry(frame_num, page_flag | Flag::V);
+        *current_entry = EntryLib::new(frame_num, page_flag | Flag::V);
     }
+    ```
     */
-    unsafe fn fixed_map(table: &mut Table, page_num: usize, frame_num: usize, page_flag: Flag); 
+    fn fixed_map(table: &mut Table, page_num: usize, frame_num: usize, page_flag: Flag); 
     /**insert page number area \[start, end]
      
     */
-    unsafe fn fixed_map_area(table: &mut Table, page: (usize, usize), frame: usize, flag: Flag) {
+    fn fixed_map_area(table: &mut Table, page: (usize, usize), frame: usize, flag: Flag) {
         let (start, end) = page;
 
         if start > end {
@@ -143,21 +160,25 @@ pub trait Lib: Dependence {
         }
     }
     /**
+    参考实现：
+    ```
     fn get(table: &mut Table, page_num: usize) -> (usize, Flag) {
-        let index = Self::index(page_num);
-        let root = Self::as_table(table.root());
+        let index = Self::index(page_num); let root = Self::as_table(table.root.number);
 
         let mut current_entry = &mut root[index[0]];
-        let mut current_table = unsafe{ Self::table(*current_entry) };
+        let frame_number = EntryLib::frame_number(current_entry);
+        let mut current_table = Self::as_table(frame_number);
 
         for i in 1..(Self::conf() - 1) {
             current_entry = &mut current_table[index[i]];
-            current_table = unsafe { Self::table(*current_entry) };
+            let frame_number = EntryLib::frame_number(current_entry);
+            current_table = Self::as_table(frame_number);
         }
 
         current_entry = &mut current_table[index[Self::conf() - 1]];
-        (Self::frame_number(*current_entry), Self::flag(*current_entry))
+        (EntryLib::frame_number(current_entry), EntryLib::flag(current_entry))
     }
+    ```
     */
     fn get(table: &mut Table, page_num: usize) -> (usize, Flag);
     /**
@@ -180,22 +201,27 @@ pub trait Dependence {
     fn conf() -> usize;
 
     /**
+    实现参考：
+    ```
     fn get_mut(table: &mut Table, page_num: usize) -> &mut Entry {
         let index = Self::index(page_num);
         let table = Self::as_table(table.root.number);
 
         let mut current_entry = &mut table[index[0]];
-        let mut current_table = unsafe{ Self::table(*current_entry) };
+        let frame_number = EntryLib::frame_number(current_entry);
+        let mut current_table = Self::as_table(frame_number);
 
         for i in 1..(Self::conf() - 1) {
             current_entry = &mut current_table[index[i]];
-            current_table = unsafe{ Self::table(*current_entry) };
+            let frame_number= EntryLib::frame_number(current_entry);
+            current_table = Self::as_table(frame_number);
         }
 
         current_entry = &mut current_table[index[Self::conf() - 1]];
 
         current_entry
     }
+    ```
     */
     fn get_mut(table: &mut Table, page_num: usize) -> &mut Entry;
 }
@@ -203,6 +229,7 @@ pub trait Dependence {
 /**
 hold frame 采用树形结构设计的问题不好确定键值对
 */
+#[derive(Clone)]
 pub struct Table {
     pub root: Frame,
     pub frame: Vec<Frame>,
@@ -350,7 +377,7 @@ mod test {
             EntryLib::flag_set(entry, Flag::empty());
         }
 
-        unsafe fn fixed_map(table: &mut Table, page_num: usize, frame_num: usize, page_flag: Flag) {
+        fn fixed_map(table: &mut Table, page_num: usize, frame_num: usize, page_flag: Flag) {
             let index = Self::index(page_num); let root = Self::as_table(table.root.number);
 
             let mut current_entry = &mut root[index[0]];
@@ -417,7 +444,7 @@ mod test {
         Frame::init(head, tail);
 
         let mut table = Table::new();
-        unsafe{ TableLib::fixed_map(&mut table, 0, 0, Flag::V) };
+        TableLib::fixed_map(&mut table, 0, 0, Flag::V);
 
         let (number, flag) = TableLib::get(&mut table, 0);
 

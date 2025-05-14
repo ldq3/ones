@@ -7,15 +7,14 @@
 use crate::concurrency::thread::context::Context;
 
 #[repr(C)]
-#[derive(Clone, Copy)]
-pub struct Data<C: Context> {
+pub struct Data {
     /// context
-    pub cx: C,
+    pub cx: Context,
     /// kernel information
     pub ki: KernelInfo,
 }
 
-impl<C: Context> Data<C> {
+impl Data {
     #[inline]
     pub fn get_mut(frame_number: usize) -> &'static mut Self {
         use crate::memory::Address;
@@ -25,7 +24,6 @@ impl<C: Context> Data<C> {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
 pub struct KernelInfo {
     pub addr_trans: usize, 
     /// the address of service routine

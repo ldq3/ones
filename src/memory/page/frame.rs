@@ -7,7 +7,7 @@ init()
 # 结构体
 Frame
 */
-
+#[derive(Clone)]
 pub struct Frame {
     pub number: usize
 }

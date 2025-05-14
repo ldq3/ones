@@ -29,6 +29,19 @@
 - 函数输入参数
 - dynamic trait
 
+```rust
+fn access<F, V>(f: F) -> V 
+where
+    F: FnOnce(&mut Model<P>) -> V,
+{
+    let mut mutex = Self::get_ref().lock();
+    let option = mutex.as_mut();
+    if let Some(scheduler) = option {
+        f(scheduler)
+    } else { panic!("The scheduler is not initialized."); }
+}
+```
+
 ## 错误处理
 静态错误
 动态错误

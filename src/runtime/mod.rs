@@ -6,7 +6,7 @@ heap
 
 pub mod address_space;
 
-use crate::memory::Flag;
+use crate::memory::{ page, Flag };
 
 /**
 range 为页号
@@ -18,6 +18,7 @@ pub struct Segment {
     pub range: (usize, usize),
     pub growth: bool,
     pub flag: Flag,
+    pub map: page::Map,
 }
 
 pub trait Runtime {

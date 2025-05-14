@@ -12,15 +12,50 @@
 pub mod context;
 
 use alloc::vec::Vec;
-
 use context::Context;
+use crate::memory::Address;
 
-pub trait Mod<C: Context> {
+pub trait Lib {
     /**
-    # 输入 
+    # 返回值
+    thread id
     */
-    fn new(id: usize, pid: usize, cx: usize) -> usize;
+    fn new(pid: usize) -> usize {
+        let frame = Frame::new();
 
+        let address = Address::address(frame.number); 
+        let context = unsafe{ &mut *(address as *mut Context) };
+
+        let tid = access(|scheduler| {
+            let tid = scheduler.id.add();
+
+            let thread = Thread {
+                pid,
+                tid,
+                context
+            };
+
+            scheduler.thread[tid] = thread;
+            // kernel map
+
+            tid
+        });
+
+        tid
+    }
+}
+
+/**
+state
+*/
+pub struct Thread {
+    pub pid: usize,
+    pub tid: usize,
+
+    pub context: &'static mut Context,
+}
+
+impl Thread {
     // fn access<F, V>(f: F) -> V 
     // where
     //     F: FnOnce(&mut T) -> V,
@@ -31,20 +66,6 @@ pub trait Mod<C: Context> {
     //         f(scheduler)
     //     } else { panic!("The scheduler is not initialized."); }
     // }
-
-    fn context(id: usize) -> &'static mut C;
-
-    fn switch();
-}
-
-/**
-state
-*/
-pub struct Thread {
-    pub pid: usize,
-    pub tid: usize,
-
-    pub context: usize, // &'static mut Context,
 }
 
     // /**
@@ -92,16 +113,33 @@ pub struct Thread {
     //     (start, end)
     // }
 
+struct Scheduler {
+    thread: Vec<Thread>,
+    id: Preemptive,
+}
+
 use lazy_static::lazy_static;
 use spin::Mutex;
 
+use crate::{concurrency::scheduler::Preemptive, memory::page::frame::Frame};
 lazy_static! {
-    static ref THREAD: Mutex<Vec<Thread>> = Mutex::new(Vec::new());
+    static ref SCHEDULER: Mutex<Scheduler> = Mutex::new(
+        Scheduler {
+            thread: Vec::new(),
+            id: Preemptive::new(config::CAP)
+        }
+    );
 }
-
-use crate::concurrency::scheduler::Preemptive;
-lazy_static! {
-    static ref SCHEDULER: Mutex<Preemptive> = Mutex::new(Preemptive::new(config::CAP));
+/**
+Access thread scheduler.
+*/
+#[inline]
+fn access<F, V>(f: F) -> V
+where
+    F: FnOnce(&mut Scheduler) -> V,
+{
+    let mut mutex = SCHEDULER.lock();
+    f(&mut mutex)
 }
 
 mod config {

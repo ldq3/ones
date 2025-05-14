@@ -1,39 +1,38 @@
 /**data registers
 
 */
-pub trait Context {
-    fn empty() -> Self;
+pub trait Lib {
     /**
     intervene id
     */
-    fn iid(&self) -> usize;
+    fn iid(context: &Context) -> usize;
     /**
     intervene return
     */
-    fn iret(&self) -> usize;
+    fn iret(context: &Context) -> usize;
     /**
     intervene return
     */
-    fn iret_set(&mut self, value: usize);
+    fn iret_set(context: &mut Context, value: usize);
     /**
     intervene argument
     */
-    fn iarg(&self) -> [usize; 3];
+    fn iarg(context: &Context) -> [usize; 3];
 
-    fn sp_set(&mut self, value: usize);
+    fn sp_set(context: &mut Context, value: usize);
 
-    fn pc_add(&mut self, value: usize);
+    fn pc_add(context: &mut Context, value: usize);
 }
 
 #[derive(Clone, Debug)]
 #[repr(C)]
-pub struct ModelContext {
+pub struct Context {
     pub data_reg: [usize; 32],
     pub status: usize,
     pub pc: usize,
 }
 
-impl ModelContext {
+impl Context {
     #[inline]
     pub fn empty() -> Self {
         Self {

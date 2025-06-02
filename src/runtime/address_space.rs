@@ -24,9 +24,12 @@ use alloc::vec::Vec;
 
 use crate::{
     runtime::Segment,
-    memory::{ page, Flag },
+    memory::Flag,
 };
 
+/**
+动态段：user stack、kernel stack
+*/
 #[derive(Clone)]
 pub struct AddressSpace {
     /// Address of program entry.
@@ -45,7 +48,7 @@ impl AddressSpace {
         }
     }
     /**
-    
+    identical map
     */
     pub fn new_kernel(
         entry: usize,
@@ -55,33 +58,29 @@ impl AddressSpace {
         data: (usize, usize),
         static_data: (usize, usize),
         frame: (usize, usize),
-        itext: usize,
     ) -> Self {
         let mut segement = Vec::new();
 
         for range in mmio {
             segement.push(
-                Segment { range: *range, growth: true, flag: Flag::R | Flag::W, map: page::Map::Fixed(range.0)}
+                Segment { range: *range, flag: Flag::R | Flag::W }
             );
         }
 
         segement.push(
-            Segment { range: text, growth: true, flag: Flag::R | Flag::X, map: page::Map::Fixed(text.0) }
+            Segment { range: text, flag: Flag::R | Flag::X }
         );
         segement.push(
-            Segment { range: read_only_data, growth: true, flag: Flag::R, map: page::Map::Fixed(read_only_data.0)}
+            Segment { range: read_only_data, flag: Flag::R }
         );
         segement.push(
-            Segment { range: data, growth: true, flag: Flag::R | Flag::W, map: page::Map::Fixed(data.0) }
+            Segment { range: data, flag: Flag::R | Flag::W }
         );
         segement.push(
-            Segment { range: static_data, growth: true, flag: Flag::R | Flag::W, map: page::Map::Fixed(static_data.0)}
+            Segment { range: static_data, flag: Flag::R | Flag::W }
         );
         segement.push(
-            Segment { range: frame, growth: true, flag: Flag::R | Flag::W, map: page::Map::Fixed(frame.0)}
-        );
-        segement.push(
-            Segment { range: (itext, itext), growth: true, flag: Flag::R | Flag::X, map: page::Map::Fixed(config::INTERVENE_TEXT) }
+            Segment { range: frame, flag: Flag::R | Flag::W }
         );
 
         Self {
@@ -90,8 +89,16 @@ impl AddressSpace {
             stack_base: frame.1 + 1
         }
     }
+    /**
+    解析 elf 数据，得到地址空间的静态信息
 
-    pub fn from_elf(elf: &[u8]) -> Self {
+    # 输入
+    itext：intervene text 段的页框号
+
+    # 输出
+    (AddressSpace, data_offset)
+    */
+    pub fn from_elf(elf: &[u8]) -> (Self, Vec<(usize, usize)>) {
         // map program headers of elf, with U flag
         let elf = xmas_elf::ElfFile::new(elf).unwrap();
         let magic = elf.header.pt1.magic;
@@ -101,7 +108,7 @@ impl AddressSpace {
         let mut stack_base = 0;
 
         let ph_count = elf.header.pt2.ph_count();
-        // let mut page_table = page::Table::new();  
+        let mut data_offset = Vec::new();
 
         let mut segement = Vec::new();
         for i in 0..ph_count {
@@ -120,34 +127,53 @@ impl AddressSpace {
                 if ph_flags.is_write() { flag |= Flag::W; }
                 if ph_flags.is_execute() { flag |= Flag::X; }
 
-                segement.push(Segment { range, growth: true, flag, map: page::Map::Random });
-
-                // page_table.map_area(range, flag);
-
-                // page_table.copy_data(range, &elf.input[program_header.offset() as usize..(program_header.offset() + program_header.file_size()) as usize]);
+                segement.push(Segment { range, flag });
+                data_offset.push(
+                    (program_header.offset() as usize, (program_header.offset() + program_header.file_size()) as usize)
+                );
 
                 stack_base = range.1;
             }
-        } 
+        }
+ 
+        (
+            Self { entry, segement, stack_base },
+            data_offset,
+        )
+    }
+    /**
+    Return the page number of intervene stack by thread id.
 
-        // unsafe { page_table.fixed_map(config::INTERVENE_TEXT, itext, Flag::X | Flag::R) };
-    
-        Self {
-            entry,
-            segement,
-            stack_base,
+    the intervene stack size is 1
+
+    两个相邻的 intervene stack 之间有一个保护页面
+    */
+    #[inline]
+    pub fn istack(tid: usize) -> Segment {
+        let page_number = config::INTERVENE_TEXT - 1 - tid * 2;
+
+        Segment {
+            range: (page_number, page_number),
+            flag: Flag::R | Flag::W
+        }
+    }
+    pub fn idata(tid: usize) -> Segment {
+        let page_number = config::INTERVENE_TEXT - 1 - tid * 2;
+
+        Segment {
+            range: (page_number, page_number),
+            flag: Flag::R | Flag::W
         }
     }
     /**
-    Return the page number of intervene data page by thread id.
-
-    Return the page number of intervene context in user program page table.
-
-    the kernel stack size is 1
+    intervene text
     */
     #[inline]
-    pub fn kernel_stack(tid: usize) -> (usize, Flag) {
-        (config::INTERVENE_TEXT - 1 - tid, Flag::W | Flag::R)
+    pub fn itext() -> Segment {
+        Segment {
+            range: (config::INTERVENE_TEXT, config::INTERVENE_TEXT),
+            flag: Flag::R | Flag::X
+        }
     }
     /**
     线程的用户栈
@@ -155,11 +181,14 @@ impl AddressSpace {
     # 输入
     coroutine id
     */
-    pub fn user_stack(&self, cid: usize) -> (usize, usize, Flag) {
+    pub fn stack(&self, cid: usize) -> Segment {
         let start = self.stack_base + cid;
         let end = start + config::USER_STACK_SIZE;
 
-        (start, end, Flag::R | Flag::W)
+        Segment {
+            range: (start, end),
+            flag: Flag::R | Flag::W
+        }
     }
 }
 

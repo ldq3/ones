@@ -11,122 +11,83 @@
 
 pub mod context;
 
+use alloc::vec;
 use alloc::vec::Vec;
-use context::Context;
-use crate::memory::Address;
+use crate::{ 
+    concurrency::scheduler::Scheduler as S, intervene::data::Data, memory::Address
+};
 
 pub trait Lib {
     /**
     # 返回值
     thread id
     */
-    fn new(pid: usize) -> usize {
-        let frame = Frame::new();
+    fn new(pid: usize) -> usize; 
+}
 
-        let address = Address::address(frame.number); 
-        let context = unsafe{ &mut *(address as *mut Context) };
+/**
+不用保存协程的信息
+*/
+#[derive(Clone)]
+pub struct Thread {
+    pub pid: usize,
+    pub tid: usize,
+
+    idata: usize,
+}
+
+impl Thread {
+    /**
+    #参数
+    - pid: 进程 id
+    - frame_number: intervene data\intervene stack 所在页面的页框号
+    - entry: 线程的入口地址
+    - ki: kernel information
+
+    # 返回值
+    thread id
+    */
+    pub fn new(pid: usize, frame_number: usize, idata: Data) -> usize {
+        let address = Address::address(frame_number); 
 
         let tid = access(|scheduler| {
             let tid = scheduler.id.add();
 
-            let thread = Thread {
+            let mut thread = Thread {
                 pid,
                 tid,
-                context
+                idata: address
             };
 
-            scheduler.thread[tid] = thread;
-            // kernel map
+            *thread.idata() = idata;
+
+            scheduler.thread[tid] = Some(thread);
 
             tid
         });
 
         tid
     }
+
+    #[inline]
+    pub fn idata(&mut self) -> &'static mut Data {
+        unsafe{ &mut *(self.idata as *mut Data) }
+    }
 }
 
-/**
-state
-*/
-pub struct Thread {
-    pub pid: usize,
-    pub tid: usize,
-
-    pub context: &'static mut Context,
-}
-
-impl Thread {
-    // fn access<F, V>(f: F) -> V 
-    // where
-    //     F: FnOnce(&mut T) -> V,
-    // {
-    //     let mut guard = SCHEDULER.lock();
-    //     let option = guard.as_mut();
-    //     if let Some(scheduler) = option {
-    //         f(scheduler)
-    //     } else { panic!("The scheduler is not initialized."); }
-    // }
-}
-
-    // /**
-    // 在 idle 内核控制流中使用，保存当前内核控制流上下文，并切换至由 (pid, tid) 指定的用户程序内核 intervene 控制流。
-    // */
-    // #[inline]
-    // pub fn switch_to_ready(&mut self) -> (usize, usize) {
-    //     let kernel = &mut self.data[0];
-    //     let idle = kernel.get_context_mut(0);
-    //     let idle = idle as *mut _ as usize;
-
-    //     let (pid, tid) = self.ready.pop_back().unwrap();
-    //     self.running = (pid, tid);
-    //     let process = &self.data[pid];
-    //     let next = process.get_context_ref(tid) as *const _ as usize;
-
-    //     (idle, next)
-    // }
-
-    // /**
-    // 由当前用户程序内核 intervene 控制流切换至 idle 控制流
-    // */
-    // pub fn switch_to_idle(&mut self) -> (usize, usize) {
-    //     let (pid, tid) = self.running;
-
-    //     let process = &mut self.data[pid];
-    //     let current = &mut process.get_context_mut(tid);
-    //     let current = current as *mut _ as usize;
-
-    //     let kernel = &self.data[0];
-    //     let idle = &kernel.get_context_ref(0) as *const _ as usize;
-
-    //     (current, idle)
-    // }
-    // /**
-    // Allocate kernel stack for thread, return the address of kernel stack bottom in kernel address space.
-    // */
-    // pub fn alloc_kernel_stack(&mut self) -> (usize, usize) {
-    //     use crate::runtime::address_space::config::INTERVENE_TEXT;
-
-    //     let id = self.allocator.alloc().unwrap();
-    //     let start = INTERVENE_TEXT - id * config::STACK_SIZE - 1;
-    //     let end = start + config::STACK_SIZE - 1;
-
-    //     (start, end)
-    // }
-
-struct Scheduler {
-    thread: Vec<Thread>,
-    id: Preemptive,
+pub struct Scheduler {
+    pub thread: Vec<Option<Thread>>,
+    pub id: S,
 }
 
 use lazy_static::lazy_static;
 use spin::Mutex;
 
-use crate::{concurrency::scheduler::Preemptive, memory::page::frame::Frame};
 lazy_static! {
     static ref SCHEDULER: Mutex<Scheduler> = Mutex::new(
         Scheduler {
-            thread: Vec::new(),
-            id: Preemptive::new(config::CAP)
+            thread: vec![None; 16],
+            id: S::new(config::CAP)
         }
     );
 }
@@ -134,7 +95,7 @@ lazy_static! {
 Access thread scheduler.
 */
 #[inline]
-fn access<F, V>(f: F) -> V
+pub fn access<F, V>(f: F) -> V
 where
     F: FnOnce(&mut Scheduler) -> V,
 {

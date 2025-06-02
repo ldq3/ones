@@ -1,4 +1,6 @@
 /*!
+介入机制需要的专用寄存器
+
 # 上下文切换
 内核的 intervene 执行流
 
@@ -65,14 +67,14 @@ pub trait Dependence {
         (base + relative_layout.0, base + relative_layout.1, base + relative_layout.2, base + relative_layout.3)
     }
     */
-    fn relative_layout() -> (usize, usize, usize, usize);
+    fn layout() -> (usize, usize, usize, usize);
     /**
     set service routine.
     */
     fn service_set(address: usize);
     
     #[inline]
-    fn dist_user(_intervene_data: &mut Data, cause: Cause, _value: usize) {
+    fn dist_user(_idata: &mut Data, cause: Cause, _value: usize) {
         use Cause::*;
 
         match cause {
@@ -84,8 +86,11 @@ pub trait Dependence {
     }
     /**
     service routine
+
+    # 输入
+    idata: intervene data
     */
-    fn service_kernel(_intervene_data: &mut Data) {
+    fn service_kernel(idata: &mut Data) {
         use Cause::*;
         let cause = Self::cause();
         let _value = Self::value();
@@ -98,7 +103,7 @@ pub trait Dependence {
             //     info!("Timer.");
             // },
             Breakpoint => {
-                Self::breakpoiont();
+                Self::breakpoiont(idata);
             }
             EnvCall => {
                 panic!("This is kernel.");
@@ -122,7 +127,7 @@ pub trait Dependence {
     /**
     intervene_data.cx.pc_add(2);
     */
-    fn breakpoiont();
+    fn breakpoiont(idata: &mut Data);
     /**
     intervene_data.cx.pc_add(4);
     let iid = intervene_data.cx.iid();

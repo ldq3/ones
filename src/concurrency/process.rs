@@ -1,7 +1,7 @@
-use alloc::{ vec, vec::Vec };
+use alloc::vec::Vec;
 
 use crate::{
-    memory::page::{self, Table}, runtime::address_space::AddressSpace, Allocator
+    memory::page, runtime::address_space::AddressSpace, Allocator
 };
 
 /**
@@ -9,22 +9,32 @@ use crate::{
 new_pid()
 */
 pub trait Lib {
-     fn fork(_process: &mut Process) -> usize {
-        0
-    }
-
     /**
-    在当前进程的上下文中创建一个新的子进程，并将新进程的代码和数据复制到子进程的内存空间中
-
-    # 返回值
-    process id
+    The id of kernel process is 0.
     */
-    fn spawn(_proess: &mut Process, _address_space: AddressSpace) -> usize {
-        0
-    }
+    fn new_kernel();
+    /**
+    Add init process.
+    */
+    fn init() -> usize;
+    // /**
+    // fn fork(process: &mut Process) -> usize {
+    //     let id = Self::new_pid();
+
+    //     let thread = process.0.thread.iter().map(|x| x.clone()).collect();
+
+    //     let inner = Process {
+    //         id,
+    //         thread,
+    //         parent: Some(process.0.id),
+    //         address_space: process.0.address_space.clone(),
+    //         children: Vec::new(),
+    //     };
+    // }
+    // */
+    // fn fork(process: &mut Process) -> usize;
 }
 
-#[derive(Clone)]
 pub struct Process {
     pub id: usize, // 如果没有该字段不方便实现 Drop
 
@@ -37,16 +47,6 @@ pub struct Process {
 }
 
 impl Process {
-    fn empty() -> Self {
-        Self {
-            id: 0,
-            address_space: AddressSpace::empty(),
-            thread: Vec::new(),
-            parent: None,
-            children: Vec::new(),
-            page_table: Table::new(),
-        }
-    }
     /**
     use ones::{
             memory::Address,
@@ -87,21 +87,20 @@ impl Process {
         self.0.process.insert(pid, process);
         self.0.ready.push_back((pid, 0));
     */
-    pub fn new(address_space: AddressSpace) -> usize { 
+    pub fn new(parent: Option<usize>, address_space: AddressSpace, page_table: page::Table) -> usize { 
         let id = access(|manager| {
             let id = manager.allocator.alloc().unwrap();
-            let page_table = Table::new(); // #TODO
             
             let process = Process {
                 id,
                 address_space,
                 thread: Vec::new(),
-                parent: None,
+                parent,
                 children: Vec::new(),
                 page_table
             };
         
-            manager.process[id] = process;
+            manager.process[id] = Some(process);
 
             id
         }); 
@@ -110,36 +109,43 @@ impl Process {
     }
 }
 
-impl Drop for Process {
-    #[inline]
-    fn drop(&mut self) {
-        access(|manager| {
-            manager.allocator.dealloc(self.id);
-        })
-    }
-}
+// impl Drop for Process {
+//     #[inline]
+//     fn drop(&mut self) {
+//         access(|manager| {
+//             manager.allocator.dealloc(self.id);
+//         })
+//     }
+// }
 
-struct Manager {
-    allocator: Allocator,
-    process: Vec<Process>,
+pub struct Manager {
+    pub allocator: Allocator,
+    pub process: Vec<Option<Process>>,
 }
 
 use spin::Mutex;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref MANAGER : Mutex<Manager> = Mutex::new(
-        Manager {
-            allocator: Allocator::new(0, 15).unwrap(),
-            process: vec![Process::empty(); 16]
+    static ref MANAGER : Mutex<Manager> = {
+        let mut process = Vec::new();
+        for _ in 0..16 {
+            process.push(None);
         }
-    );
+
+        Mutex::new(
+            Manager {
+                allocator: Allocator::new(0, 15).unwrap(),
+                process,
+            }
+        )
+    };
 }
 /**
 Access process manager.
 */
 #[inline]
-fn access<F, V>(f: F) -> V
+pub fn access<F, V>(f: F) -> V
 where
     F: FnOnce(&mut Manager) -> V,
 {

@@ -14,21 +14,20 @@ pub struct Data {
     pub ki: KernelInfo,
 }
 
-impl Data {
-    #[inline]
-    pub fn get_mut(frame_number: usize) -> &'static mut Self {
-        use crate::memory::Address;
-        let address = Address::address(frame_number);
-        unsafe{ &mut *(address as *mut Self) }
-    }
-}
+// impl Data {
+//     #[inline]
+//     pub fn get_mut(frame_number: usize) -> &'static mut Self {
+//         use crate::memory::Address;
+//         let address = Address::address(frame_number);
+//         unsafe{ &mut *(address as *mut Self) }
+//     }
+// }
 
 #[repr(C)]
 pub struct KernelInfo {
     pub addr_trans: usize, 
-    /// the address of service routine
-    pub service: usize,
-
     /// kernel stack pointer
     pub sp: usize,
+    /// the address of service routine
+    pub service: usize,
 }

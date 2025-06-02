@@ -184,7 +184,7 @@ pub trait Lib: Dependence {
     /**
     range: the page number range
     */
-    fn copy_data(&mut self, range: (usize, usize), data: &[u8]);
+    fn copy_data(table: &mut Table, range: (usize, usize), data: &[u8]);
 }
 
 pub trait Dependence {
@@ -229,7 +229,6 @@ pub trait Dependence {
 /**
 hold frame 采用树形结构设计的问题不好确定键值对
 */
-#[derive(Clone)]
 pub struct Table {
     pub root: Frame,
     pub frame: Vec<Frame>,
@@ -429,7 +428,7 @@ mod test {
             (EntryLib::frame_number(current_entry), EntryLib::flag(current_entry))
         }
 
-        fn copy_data(&mut self, _range: (usize, usize), _data: &[u8]) {
+        fn copy_data(_table: &mut Table, _range: (usize, usize), _data: &[u8]) {
             todo!()
         }
     }

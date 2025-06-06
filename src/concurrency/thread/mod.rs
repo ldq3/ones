@@ -14,7 +14,9 @@ pub mod context;
 use alloc::vec;
 use alloc::vec::Vec;
 use crate::{ 
-    concurrency::scheduler::Scheduler as S, intervene::data::Data, memory::Address
+    concurrency::scheduler::Scheduler as S,
+    intervene::data::Data,
+    runtime::{ address_space::AddressSpace, Segment },
 };
 
 pub trait Lib {
@@ -33,7 +35,7 @@ pub struct Thread {
     pub pid: usize,
     pub tid: usize,
 
-    idata: usize,
+    pub idata: usize,
 }
 
 impl Thread {
@@ -44,29 +46,40 @@ impl Thread {
     - entry: 线程的入口地址
     - ki: kernel information
 
+    todo: idata
+
     # 返回值
-    thread id
+    (thread id, 动态段和内核段）
+
+    0. user stack
+    1. intervene stack
+    2. kernel stack
     */
-    pub fn new(pid: usize, frame_number: usize, idata: Data) -> usize {
-        let address = Address::address(frame_number); 
+    pub fn new(pid: usize, ustack_size: usize, kstack_size: usize) -> (usize, Vec<Segment>) {
+        let mut segement = Vec::new();
 
-        let tid = access(|scheduler| {
-            let tid = scheduler.id.add();
+        let tid = access(|scheduler| { scheduler.id.add() });
+        
+        process::access(|manager| {
+            let process = manager.process[pid].as_mut().unwrap();
+            segement.push(process.address_space.stack(tid, ustack_size));
+            segement.push(AddressSpace::idata(tid));
 
-            let mut thread = Thread {
-                pid,
-                tid,
-                idata: address
-            };
-
-            *thread.idata() = idata;
-
-            scheduler.thread[tid] = Some(thread);
-
-            tid
+            let kernel = manager.process[0].as_mut().unwrap();
+            segement.push(kernel.address_space.stack(tid, kstack_size));
         });
 
-        tid
+        let thread = Thread {
+            pid,
+            tid,
+            idata: 0
+        };
+
+        access(|scheduler| {
+            scheduler.thread[tid] = Some(thread);
+        });
+
+        (tid, segement)
     }
 
     #[inline]
@@ -82,6 +95,8 @@ pub struct Scheduler {
 
 use lazy_static::lazy_static;
 use spin::Mutex;
+
+use super::process;
 
 lazy_static! {
     static ref SCHEDULER: Mutex<Scheduler> = Mutex::new(

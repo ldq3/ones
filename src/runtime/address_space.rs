@@ -36,7 +36,7 @@ pub struct AddressSpace {
     pub entry: usize,
     pub segement: Vec<Segment>,
     /// Page number of program end.
-    pub stack_base: usize,
+    pub end: usize,
 }
 
 impl AddressSpace {
@@ -44,7 +44,7 @@ impl AddressSpace {
         Self {
             entry: 0,
             segement: Vec::new(),
-            stack_base: 0
+            end: 0
         }
     }
     /**
@@ -86,7 +86,7 @@ impl AddressSpace {
         Self {
             entry,
             segement,
-            stack_base: frame.1 + 1
+            end: frame.1 + 1
         }
     }
     /**
@@ -137,26 +137,11 @@ impl AddressSpace {
         }
  
         (
-            Self { entry, segement, stack_base },
+            Self { entry, segement, end: stack_base },
             data_offset,
         )
     }
-    /**
-    Return the page number of intervene stack by thread id.
 
-    the intervene stack size is 1
-
-    两个相邻的 intervene stack 之间有一个保护页面
-    */
-    #[inline]
-    pub fn istack(tid: usize) -> Segment {
-        let page_number = config::INTERVENE_TEXT - 1 - tid * 2;
-
-        Segment {
-            range: (page_number, page_number),
-            flag: Flag::R | Flag::W
-        }
-    }
     pub fn idata(tid: usize) -> Segment {
         let page_number = config::INTERVENE_TEXT - 1 - tid * 2;
 
@@ -176,14 +161,16 @@ impl AddressSpace {
         }
     }
     /**
-    线程的用户栈
+    线程的栈
 
     # 输入
-    coroutine id
+    thread id
+
+    两个相邻的 stack 之间有一个保护页面
     */
-    pub fn stack(&self, cid: usize) -> Segment {
-        let start = self.stack_base + cid;
-        let end = start + config::USER_STACK_SIZE;
+    pub fn stack(&self, tid: usize, size: usize) -> Segment {
+        let start = self.end + 1 + tid * (size + 1);
+        let end = start + size - 1;
 
         Segment {
             range: (start, end),
@@ -202,5 +189,4 @@ mod config {
     单位：页（page）
     */
     pub const INTERVENE_TEXT: usize = (1 << 52) - 1;
-    pub const USER_STACK_SIZE: usize = 2;
 }

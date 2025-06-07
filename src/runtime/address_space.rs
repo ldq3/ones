@@ -86,7 +86,7 @@ impl AddressSpace {
         Self {
             entry,
             segement,
-            end: frame.1 + 1
+            end: frame.1
         }
     }
     /**
@@ -105,7 +105,7 @@ impl AddressSpace {
         assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
 
         let entry = elf.header.pt2.entry_point() as usize;
-        let mut stack_base = 0;
+        let mut space_end = 0;
 
         let ph_count = elf.header.pt2.ph_count();
         let mut data_offset = Vec::new();
@@ -132,12 +132,12 @@ impl AddressSpace {
                     (program_header.offset() as usize, (program_header.offset() + program_header.file_size()) as usize)
                 );
 
-                stack_base = range.1;
+                space_end = range.1;
             }
         }
  
         (
-            Self { entry, segement, end: stack_base },
+            Self { entry, segement, end: space_end },
             data_offset,
         )
     }

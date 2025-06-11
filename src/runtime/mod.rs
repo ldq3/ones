@@ -19,7 +19,6 @@ pub struct Segment {
     pub flag: Flag,
 }
 
-pub trait Runtime {
+pub trait Lib {
     fn init();
-    fn clear_bss();
 }

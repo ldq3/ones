@@ -1,3 +1,7 @@
+/*!
+The id of kernel process is 0.
+*/
+
 use alloc::vec::Vec;
 
 use crate::{
@@ -9,14 +13,12 @@ use crate::{
 new_pid()
 */
 pub trait Lib {
-    /**
-    The id of kernel process is 0.
-    */
-    fn new_kernel();
+    fn new(parent: Option<usize>, address_space: AddressSpace) -> usize;
     /**
     Add init process.
     */
-    fn init() -> usize;
+    fn from_elf(parent: Option<usize>, elf: &[u8]) -> usize;
+    fn new_kernel(address_space: AddressSpace) -> usize;
     // /**
     // fn fork(process: &mut Process) -> usize {
     //     let id = Self::new_pid();

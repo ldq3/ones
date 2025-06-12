@@ -21,19 +21,19 @@ use layout::*;
 pub use vfs::Inode;
 use file::File;
 
-pub trait Main {
+pub trait Lib {
     fn init(disk: Arc<Mutex<dyn BlockDevice>>) {
         let efs = EasyFileSystem::open(disk.clone());
         let mut handler = HANDLER.lock();
         *handler = Some(EasyFileSystem::root(&efs));
     }
 
-    fn open_file(name: &str, flag: Flag) -> Option<File> {
+    fn open_file(name: &str, flag: Flag) -> Result<File, ()> {
         if flag.contains(Flag::CREATE) {
-            if let Some(inode) = Self::get(name) {
+            if let Ok(inode) = Self::get(name) {
                 // clear size
                 inode.clear();
-                Some(File::new(flag, inode))
+                Ok(File::new(flag, inode))
             } else {
                 Self::create(name)
                 .map(|inode| File::new(flag, inode))
@@ -61,11 +61,11 @@ pub trait Main {
 
     }
 
-    fn create(name: &str) -> Option<Arc<Inode>>;
+    fn create(name: &str) -> Result<Arc<Inode>, ()>;
     /**
     Get an inode by nameSS
     */
-    fn get(name: &str) -> Option<Arc<Inode>> {
+    fn get(name: &str) -> Result<Arc<Inode>, ()> {
         let mutex = HANDLER.lock();
         if let Some(handler) = mutex.as_ref() {
             handler.find(name)

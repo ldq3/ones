@@ -24,89 +24,92 @@ use alloc::vec::Vec;
 
 use crate::{
     runtime::Segment,
-    memory::{ page, Flag },
+    memory::Flag,
 };
 
-pub trait AddressSpace {
-    fn from_elf(elf: &[u8]) -> Self;
-    fn clone(&self) -> Self;
-    fn new_kernel() -> Self;
-    fn kernel_segement(
+/**
+动态段：user stack、kernel stack
+*/
+#[derive(Clone)]
+pub struct AddressSpace {
+    /// Address of program entry.
+    pub entry: usize,
+    pub segement: Vec<Segment>,
+    /// Page number of program end.
+    pub end: usize,
+}
+
+impl AddressSpace {
+    pub fn empty() -> Self {
+        Self {
+            entry: 0,
+            segement: Vec::new(),
+            end: 0
+        }
+    }
+    /**
+    identical map
+    */
+    pub fn new_kernel(
+        entry: usize,
         mmio: &[(usize, usize)],
         text: (usize, usize),
         read_only_data: (usize, usize),
         data: (usize, usize),
         static_data: (usize, usize),
         frame: (usize, usize),
-    ) -> Vec<(Segment, page::Map)> {
+    ) -> Self {
         let mut segement = Vec::new();
+
         for range in mmio {
             segement.push(
-                (Segment { range: *range, growth: true, flag: Flag::R | Flag::W }, page::Map::Fixed(range.0))
+                Segment { range: *range, flag: Flag::R | Flag::W }
             );
         }
 
         segement.push(
-            (Segment { range: text, growth: true, flag: Flag::R | Flag::X }, page::Map::Fixed(text.0))
+            Segment { range: text, flag: Flag::R | Flag::X }
         );
         segement.push(
-            (Segment { range: read_only_data, growth: true, flag: Flag::R }, page::Map::Fixed(read_only_data.0))
+            Segment { range: read_only_data, flag: Flag::R }
         );
         segement.push(
-            (Segment { range: data, growth: true, flag: Flag::R | Flag::W }, page::Map::Fixed(data.0))
+            Segment { range: data, flag: Flag::R | Flag::W }
         );
         segement.push(
-            (Segment { range: static_data, growth: true, flag: Flag::R | Flag::W }, page::Map::Fixed(static_data.0))
+            Segment { range: static_data, flag: Flag::R | Flag::W }
         );
         segement.push(
-            (Segment { range: frame, growth: true, flag: Flag::R | Flag::W }, page::Map::Fixed(frame.0))
+            Segment { range: frame, flag: Flag::R | Flag::W }
         );
 
-        segement
+        Self {
+            entry,
+            segement,
+            end: frame.1
+        }
     }
     /**
-    Return the page number of intervene data page by thread id.
+    解析 elf 数据，得到地址空间的静态信息
 
-    Return the page number of intervene context in user program page table.
-    */
-    #[inline]
-    fn intervene_data(tid: usize) -> (usize, Flag) {
-        (config::INTERVENE_TEXT - 1 - tid, Flag::W | Flag::R)
-    }
-    fn stack(&self, tid: usize) -> (usize, usize, Flag);
-    fn new_intervene(&mut self, tid: usize) -> usize;
-    /**
-    返回栈底在用户空间的地址
-    */
-    fn new_stack(&mut self, tid: usize) -> usize;
-}
-
-pub struct ModelAddressSpace<T: page::Table> {
-    /// Address of program entry.
-    pub entry: usize,
-    /// Page number of program end.
-    pub end: usize,
-    pub segement: Vec<(Segment, page::Map)>,
-    pub page_table: T,
-}
-
-impl<T: page::Table> ModelAddressSpace<T> {
-    /**
     # 输入
-    - itext: frame number
-    - idata: 
+    itext：intervene text 段的页框号
+
+    # 输出
+    (AddressSpace, data_offset)
     */
-    pub fn from_elf(elf: &[u8], itext: usize) -> Self {
+    pub fn from_elf(elf: &[u8]) -> (Self, Vec<(usize, usize)>) {
         // map program headers of elf, with U flag
         let elf = xmas_elf::ElfFile::new(elf).unwrap();
         let magic = elf.header.pt1.magic;
         assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
 
         let entry = elf.header.pt2.entry_point() as usize;
-        let mut stack_base = 0;
+        let mut space_end = 0;
 
         let ph_count = elf.header.pt2.ph_count();
-        let mut page_table = T::new();
+        let mut data_offset = Vec::new();
+
         let mut segement = Vec::new();
         for i in 0..ph_count {
             let program_header = elf.program_header(i).unwrap();
@@ -124,31 +127,59 @@ impl<T: page::Table> ModelAddressSpace<T> {
                 if ph_flags.is_write() { flag |= Flag::W; }
                 if ph_flags.is_execute() { flag |= Flag::X; }
 
-                segement.push((
-                    Segment { range, growth: true, flag },
-                    page::Map::Random
-                ));
+                segement.push(Segment { range, flag });
+                data_offset.push(
+                    (program_header.offset() as usize, (program_header.offset() + program_header.file_size()) as usize)
+                );
 
-                page_table.map_area(range, flag);
-
-                page_table.copy_data(range, &elf.input[program_header.offset() as usize..(program_header.offset() + program_header.file_size()) as usize]);
-
-                stack_base = range.1;
+                space_end = range.1;
             }
         }
+ 
+        (
+            Self { entry, segement, end: space_end },
+            data_offset,
+        )
+    }
 
-        unsafe { page_table.fixed_map(config::INTERVENE_TEXT, itext, Flag::X | Flag::R);}
-    
-        Self {
-            entry,
-            end: stack_base,
-            segement,
-            page_table,
+    pub fn idata(tid: usize) -> Segment {
+        let page_number = config::INTERVENE_TEXT - 1 - tid * 2;
+
+        Segment {
+            range: (page_number, page_number),
+            flag: Flag::R | Flag::W
+        }
+    }
+    /**
+    intervene text
+    */
+    #[inline]
+    pub fn itext() -> Segment {
+        Segment {
+            range: (config::INTERVENE_TEXT, config::INTERVENE_TEXT),
+            flag: Flag::R | Flag::X
+        }
+    }
+    /**
+    线程的栈
+
+    # 输入
+    thread id
+
+    两个相邻的 stack 之间有一个保护页面
+    */
+    pub fn stack(&self, tid: usize, size: usize) -> Segment {
+        let start = self.end + 1 + tid * (size + 1);
+        let end = start + size - 1;
+
+        Segment {
+            range: (start, end),
+            flag: Flag::R | Flag::W
         }
     }
 }
 
-pub mod config {
+mod config {
     // 4 GB = 4 * 2^30 B
     // 4 KB = 4 * 2^10 B
 

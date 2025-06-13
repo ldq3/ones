@@ -5,40 +5,17 @@ use crate::memory::Flag;
 /**
 public for test
 */
-pub trait Entry {
-    fn new(frame_num: usize, page_flag: Flag) -> Self;
-    fn frame_number(&self) -> usize;
-    fn flag(&self) -> Flag;
-    fn set_flag(&mut self, page_flag: Flag);
-    fn bits(&self) -> usize;
-    fn from_bits(bits: usize) -> Self;
-}
-
-/**Page Table Entry
-
-假设 page table entry 由两部分组成:
-- frame number
-- flag
-*/
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct ModelEntry<
+pub trait Lib {
+    /**
     const FRAME_NUMBER_MASK: usize,
     const FLAG_MASK: usize,
->(usize);
 
-impl<
-    const FRAME_NUMBER_MASK: usize,
-    const FLAG_MASK: usize,
-> Entry for ModelEntry<FRAME_NUMBER_MASK, FLAG_MASK> {
-    fn new(frame_num: usize, page_flag: Flag) -> Self {
-        let frame_number_bits = frame_num << FRAME_NUMBER_MASK.trailing_zeros();
+    let frame_number_bits = frame_num << FRAME_NUMBER_MASK.trailing_zeros();
         let flag_bits = (page_flag.bits as usize) << FLAG_MASK.trailing_zeros();
 
-        ModelEntry(frame_number_bits | flag_bits)
-    }
+        Entry(frame_number_bits | flag_bits)
 
-    #[inline]
+        #[inline]
     fn frame_number(&self) -> usize {
         (self.0 & FRAME_NUMBER_MASK) >> FRAME_NUMBER_MASK.trailing_zeros()
     }
@@ -55,14 +32,36 @@ impl<
 
         self.0 = frame_number_bits | flag_bits
     }
+    */
+    fn new(frame_num: usize, page_flag: Flag) -> Entry;
+    fn frame_number(entry: &Entry) -> usize;
+    fn flag(entry: &Entry) -> Flag;
+    fn flag_set(entry: &mut Entry, page_flag: Flag);
+}
 
+/**Page Table Entry
+
+假设 page table entry 由两部分组成:
+- frame number
+- flag
+*/
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Entry(usize);
+
+impl Entry {
     #[inline]
-    fn bits(&self) -> usize {
+    pub fn bits(&self) -> usize {
         self.0
     }
 
     #[inline]
-    fn from_bits(bits: usize) -> Self {
+    pub fn from_bits(bits: usize) -> Self {
         Self(bits)
+    }
+
+    #[inline]
+    pub fn bits_set(&mut self, bits: usize) {
+        self.0 = bits
     }
 }

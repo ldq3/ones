@@ -7,6 +7,7 @@ pub mod intervene;
 pub mod concurrency;
 pub mod peripheral;
 pub mod file_system;
+pub mod system_call;
 
 extern crate alloc;
 
@@ -14,6 +15,11 @@ use alloc::vec::Vec;
 
 /**
 Resycled id allocater
+
+保证从小到大分配 id
+
+# 安全性
+保证回收 id 的有效性
 */
 #[derive(Clone)]
 pub struct Allocator {

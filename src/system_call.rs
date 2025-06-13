@@ -1,14 +1,13 @@
-pub trait Lib: Dependence {
-    /**
-    只会在一处使用，所以标记为 inline。
-    */
+pub trait Lib {
     #[inline]
     fn syscall(id: usize, _args: [usize; 3]) -> isize {
         match id {
             _ => panic!("Unsupported syscall id: {}.", id),
         }
     }
+}
 
+pub trait Dependence {
     // fn write(fd: usize, buf: *const u8, len: usize) -> isize {
     //     let token = Self::current_user_token();
     //     let task = current_task().unwrap();
@@ -29,12 +28,7 @@ pub trait Lib: Dependence {
     // }
 }
 
-pub trait Dependence {
-    fn current_user_token() -> usize;
-}
-
-pub mod config {
-    
+pub mod config {    
     /// Duplicate File Descriptor
     pub const DUP: usize = 24;
 

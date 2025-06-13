@@ -7,7 +7,7 @@ init()
 # 结构体
 Frame
 */
-
+#[derive(Clone)]
 pub struct Frame {
     pub number: usize
 }
@@ -16,6 +16,7 @@ impl Drop for Frame {
     fn drop(&mut self) {
         let mut allocator = ALLOCATOR.lock();
         let allocaor = allocator.as_mut().unwrap();
+        info!("Frame {} is deallocated.", self.number);
         allocaor.dealloc(self.number)
     }
 }
@@ -62,6 +63,7 @@ impl Frame {
 }
 
 use alloc::vec::Vec;
+use log::info;
 use spin::Mutex;
 use lazy_static::lazy_static;
 use crate::Allocator;

@@ -42,7 +42,7 @@ impl Inode {
             .modify(self.block_offset, f)
     }
 
-    fn find_inode_id(&self, name: &str, disk_inode: &DiskInode) -> Option<u32> {
+    fn find_inode_id(&self, name: &str, disk_inode: &DiskInode) -> Result<u32, ()> {
         // assert it is a directory
         assert!(disk_inode.is_dir());
         let file_count = (disk_inode.size as usize) / DIRENT_SZ;
@@ -53,13 +53,13 @@ impl Inode {
                 DIRENT_SZ,
             );
             if dirent.name() == name {
-                return Some(dirent.inode_number() as u32);
+                return Ok(dirent.inode_number() as u32);
             }
         }
-        None
+        Err(())
     }
 
-    pub fn find(&self, name: &str) -> Option<Arc<Inode>> {
+    pub fn find(&self, name: &str) -> Result<Arc<Inode>, ()> {
         let fs = self.fs.lock();
         self.read_disk_inode(|disk_inode| {
             self.find_inode_id(name, disk_inode).map(|inode_id| {
@@ -99,7 +99,7 @@ impl Inode {
             // has the file been created?
             self.find_inode_id(name, root_inode)
         };
-        if self.modify_disk_inode(op).is_some() {
+        if self.modify_disk_inode(op).is_ok() {
             return None;
         }
         // create a new file

@@ -16,11 +16,9 @@ grouth true 代表向高地址方向增长，false 代表向低地址方向增�
 #[derive(Clone, Copy)]
 pub struct Segment {
     pub range: (usize, usize),
-    pub growth: bool,
     pub flag: Flag,
 }
 
-pub trait Runtime {
+pub trait Lib {
     fn init();
-    fn clear_bss();
 }

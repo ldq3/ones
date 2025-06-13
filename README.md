@@ -18,6 +18,10 @@
 
 类型依赖一个全局管理器
 
+分离泛型方法和结构体
+
+access 函数的使用限制，避免死锁，使用范围限制
+
 ## 外部依赖形式
 静态：
 - 接口
@@ -26,6 +30,19 @@
 动态：
 - 函数输入参数
 - dynamic trait
+
+```rust
+fn access<F, V>(f: F) -> V 
+where
+    F: FnOnce(&mut Model<P>) -> V,
+{
+    let mut mutex = Self::get_ref().lock();
+    let option = mutex.as_mut();
+    if let Some(scheduler) = option {
+        f(scheduler)
+    } else { panic!("The scheduler is not initialized."); }
+}
+```
 
 ## 错误处理
 静态错误

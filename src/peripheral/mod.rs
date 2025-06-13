@@ -9,6 +9,8 @@ pub trait Lib {
     Handle exception.
     */
     fn handle();
+
+    fn init();
 }
 
 /**

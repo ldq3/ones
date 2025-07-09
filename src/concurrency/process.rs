@@ -14,7 +14,7 @@ use crate::{
 # 已有
 new_pid()
 */
-pub trait Lib: Dependence {
+pub trait Lib: Hal {
     fn new(parent: Option<usize>, address_space: AddressSpace) -> usize;
     /**
     Add init process.
@@ -54,7 +54,7 @@ pub trait Lib: Dependence {
     // fn fork(process: &mut Process) -> usize;
 }
 
-pub trait Dependence {
+pub trait Hal {
     fn copy_data(table: &mut Table, range: (usize, usize), data: &[u8]);
 }
 

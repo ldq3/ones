@@ -3,7 +3,7 @@ VirtIO 定义了一种数据结构用于 queue is the mechanism for bulk data tr
 */
 use crate::memory::page::frame::Frame;
 
-pub trait Queue: Dependence + Sync + Send + 'static {
+pub trait Queue: Hal + Sync + Send + 'static {
     fn new(frame: Frame) -> Self;
     /**
     根据 Virtio 协议标准，一个完整的 I/O 请求由数个描述符链接而成（由具体的设备决定）
@@ -103,7 +103,7 @@ pub trait Queue: Dependence + Sync + Send + 'static {
     fn frame_number(&self) -> u32;
 }
 
-pub trait Dependence {
+pub trait Hal {
     fn size(&self) -> u16;
     #[inline]
     fn capacity() -> u16 {

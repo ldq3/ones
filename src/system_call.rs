@@ -1,34 +1,22 @@
-pub trait Lib {
+pub trait Lib: Hal {
     #[inline]
-    fn syscall(id: usize, _args: [usize; 3]) -> isize {
+    fn syscall(id: usize, args: [usize; 3]) -> isize {
         match id {
+            config::WRITE => Self::write(args[0], args[1] as *const u8, args[2]),
             _ => panic!("Unsupported syscall id: {}.", id),
         }
     }
 }
 
-pub trait Dependence {
-    // fn write(fd: usize, buf: *const u8, len: usize) -> isize {
-    //     let token = Self::current_user_token();
-    //     let task = current_task().unwrap();
-    //     let inner = task.inner_exclusive_access();
-    //     if fd >= inner.fd_table.len() {
-    //         return -1;
-    //     }
-    //     if let Some(file) = &inner.fd_table[fd] {
-    //         let file = file.clone();
-    //         // release current task TCB manually to avoid multi-borrow
-    //         drop(inner);
-    //         file.write(
-    //             UserBuffer::new(translated_byte_buffer(token, buf, len))
-    //         ) as isize
-    //     } else {
-    //         -1
-    //     }
-    // }
+pub trait Hal {
+    fn write(fd: usize, buf: *const u8, len: usize) -> isize;
 }
 
-pub mod config {    
+pub mod config {
+    /**!
+    系统调用号
+    */
+
     /// Duplicate File Descriptor
     pub const DUP: usize = 24;
 

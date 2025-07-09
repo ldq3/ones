@@ -17,10 +17,10 @@
 
 pub mod data;
 
-use crate::memory::Address;
+use crate::{ concurrency::thread::context::Context, memory::Address };
 use data::Data;
 
-pub trait Lib: Dependence {
+pub trait Lib: Hal {
     /**
     set kernel trap entry
     alltraps_k
@@ -40,7 +40,7 @@ pub trait Lib: Dependence {
     fn return_to_user() -> !;
 }
 
-pub trait Dependence {
+pub trait Hal {
     /**Get Exception cause.
     
     PlatformDependent
@@ -74,12 +74,12 @@ pub trait Dependence {
     fn service_set(address: usize);
     
     #[inline]
-    fn dist_user(_idata: &mut Data, cause: Cause, _value: usize) {
+    fn dist_user(idata: &mut Data, cause: Cause, _value: usize) {
         use Cause::*;
 
         match cause {
             EnvCall => {
-                Self::envcall();
+                Self::syscall(&idata.cx);
             },
             _ => { panic!("Unsupported trap!"); }
         }
@@ -106,7 +106,7 @@ pub trait Dependence {
                 Self::breakpoiont(idata);
             }
             EnvCall => {
-                panic!("This is kernel.");
+                Self::syscall(&idata.cx);
             }
             External => {
                 Self::external();
@@ -122,12 +122,6 @@ pub trait Dependence {
             }
         }
     }
-
-    fn syscall(id: usize, args: [usize; 3]) -> isize;
-    /**
-    intervene_data.cx.pc_add(2);
-    */
-    fn breakpoiont(idata: &mut Data);
     /**
     intervene_data.cx.pc_add(4);
     let iid = intervene_data.cx.iid();
@@ -138,7 +132,11 @@ pub trait Dependence {
     let result = Self::syscall(iid, iarg);
     intervene_data.cx.iret_set(result as usize); // cx is changed during sys_exec, so we have to call it again
     */
-    fn envcall();
+    fn syscall(context: &Context) -> isize;
+    /**
+    intervene_data.cx.pc_add(2);
+    */
+    fn breakpoiont(idata: &mut Data);
 
     fn external() {
         todo!()

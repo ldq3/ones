@@ -29,7 +29,7 @@ pub enum Map {
     Random,
 }
 
-pub trait Lib: Dependence {
+pub trait Lib: Hal {
     fn unmap(table: &mut Table, page_num: usize) {
         let entry = Self::get_mut(table, page_num);
 
@@ -227,7 +227,7 @@ pub trait Lib: Dependence {
     }
 }
 
-pub trait Dependence {
+pub trait Hal {
     fn index(page_num: usize) -> Vec<usize>;
 
     fn as_table(frame_number: usize) -> &'static mut [Entry] {
@@ -317,7 +317,7 @@ mod test {
     use crate::memory::{ Flag, Address };
 
     use super::{
-        Dependence, Table, Lib as T, 
+        Hal, Table, Lib as T, 
         entry::{ Entry, Lib as E },
         frame::Frame
     };
@@ -355,7 +355,7 @@ mod test {
         }
     }
 
-    impl Dependence for TableLib {
+    impl Hal for TableLib {
         fn index(page_num: usize) -> Vec<usize> {
             let mut page_num = page_num;
             let mut index = [0usize; 3];

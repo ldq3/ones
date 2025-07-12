@@ -1,49 +1,30 @@
-接入内核
+# OneS - 跨平台操作系统抽象层
+Rust 实现的跨平台操作系统抽象层为操作系统内核/驱动开发提供：
+- ✅ 平台无关的通用实现（进程调度/内存管理算法）
+- 🔌 标准化的硬件抽象接口（HAL）
+- 🧩 模块化架构支持快速移植到新平台
 
-# 测试
-外部测试和内部测试
+## 用法
+可以根据模块的说明来使用一个模块内提供的函数和结构体。
 
-标准库和 log
-
-# 设计模式
-- 外部提供方法
-
-- 数据结构：泛型结构体，缩短泛型签名，避免 trait 中出现泛型嵌套，为结构体实现同名方法，函数传递基础类型或无泛型类型
-- 模块：泛型结构体、泛型 trait、get_ref、access 方法
-- 库： 泛型 trait
-
-- 泛型单例：GenericSingleton
-- 平台相关：PlatformRelated
-- 硬件相关：HardwareRelated
-
-类型依赖一个全局管理器
-
-分离泛型方法和结构体
-
-access 函数的使用限制，避免死锁，使用范围限制
-
-## 外部依赖形式
-静态：
-- 接口
-- 泛型
-
-动态：
-- 函数输入参数
-- dynamic trait
+如果一个模块是与硬件相关的，则会存在一个 Lib Trait 对外提供与硬件相关的功能，使用它的前提是实现其中的 Hal Trait，然后可以遵循以下模式使用：
 
 ```rust
-fn access<F, V>(f: F) -> V 
-where
-    F: FnOnce(&mut Model<P>) -> V,
-{
-    let mut mutex = Self::get_ref().lock();
-    let option = mutex.as_mut();
-    if let Some(scheduler) = option {
-        f(scheduler)
-    } else { panic!("The scheduler is not initialized."); }
+use ones::system_call::{ Hal, Lib as L };
+
+pub struct Lib;
+
+impl Hal for Lib {
+    ...
 }
+
+impl L for Lib {}
 ```
 
-## 错误处理
-静态错误
-动态错误
+如果一个模块内存在全局的数据，则会提供一个名为 access 的函数，接收一个闭包来操作全局数据。为避免发生死锁，建议将该函数的使用范围限制在库和实例的对应模块中。
+
+## 平台实现
+
+| 平台  | 项目链接 |
+| --- | ---- |
+| riscv | https://github.com/ldq3/ones-riscv |

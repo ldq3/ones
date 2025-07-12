@@ -5,19 +5,36 @@ The id of kernel process is 0.
 use alloc::vec::Vec;
 
 use crate::{
-    memory::page, runtime::address_space::AddressSpace, Allocator
+    memory::page::{ self, Table },
+    runtime::address_space::AddressSpace,
+    Allocator
 };
 
 /**
 # 已有
 new_pid()
 */
-pub trait Lib {
+pub trait Lib: Hal {
     fn new(parent: Option<usize>, address_space: AddressSpace) -> usize;
     /**
     Add init process.
     */
-    fn from_elf(parent: Option<usize>, elf: &[u8]) -> usize;
+    fn from_elf(parent: Option<usize>, elf: &[u8]) -> usize {
+        let (address_space, data_offset) = AddressSpace::from_elf(&elf);
+        let pid = Self::new(parent, address_space);
+
+        access(|manager| {
+            let process = manager.process[pid].as_mut().unwrap();
+            for i in 0..data_offset.len() { 
+                let segement= process.address_space.segement[i];
+
+                Self::copy_data(&mut process.page_table, segement.range, &elf[data_offset[i].0..data_offset[i].1]);
+            }
+        });
+ 
+        pid
+    }
+
     fn new_kernel(address_space: AddressSpace) -> usize;
     // /**
     // fn fork(process: &mut Process) -> usize {
@@ -35,6 +52,10 @@ pub trait Lib {
     // }
     // */
     // fn fork(process: &mut Process) -> usize;
+}
+
+pub trait Hal {
+    fn copy_data(table: &mut Table, range: (usize, usize), data: &[u8]);
 }
 
 pub struct Process {
